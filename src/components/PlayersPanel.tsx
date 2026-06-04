@@ -11,8 +11,9 @@ export function PlayersPanel({ players, onAdd, onRemove }: PlayersPanelProps) {
   const [name, setName] = useState('');
 
   const handleAdd = () => {
-    if (!name.trim()) return;
-    onAdd(name);
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    onAdd(trimmed);
     setName('');
   };
 
@@ -23,19 +24,27 @@ export function PlayersPanel({ players, onAdd, onRemove }: PlayersPanelProps) {
         <p className="panel-subtitle">Add everyone you track stats for.</p>
       </header>
 
-      <div className="add-row">
+      <form
+        className="add-row"
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleAdd();
+        }}
+      >
         <input
           type="text"
+          name="playerName"
           placeholder="Player name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
           className="text-input"
+          autoComplete="off"
+          enterKeyHint="done"
         />
-        <button type="button" className="btn primary" onClick={handleAdd}>
+        <button type="submit" className="btn primary add-btn">
           Add
         </button>
-      </div>
+      </form>
 
       {players.length === 0 ? (
         <p className="empty-state">No players yet. Add at least two to start a game.</p>

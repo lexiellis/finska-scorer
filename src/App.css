@@ -262,9 +262,16 @@
 
 .text-input {
   flex: 1;
+  min-width: 0;
   min-height: var(--touch);
   padding: 0 1rem;
-  font-size: 1rem;
+  /* 16px prevents iOS Safari zoom-on-focus, which can break layout/taps */
+  font-size: 16px;
+}
+
+.add-btn {
+  flex-shrink: 0;
+  touch-action: manipulation;
 }
 
 .player-list {

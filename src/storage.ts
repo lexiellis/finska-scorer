@@ -71,6 +71,10 @@ export function saveData(data: AppData): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
+/** Works on LAN HTTP (phones) where crypto.randomUUID is unavailable. */
 export function createId(): string {
-  return crypto.randomUUID();
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 11)}`;
 }
