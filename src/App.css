@@ -120,8 +120,11 @@
   display: flex;
   flex-direction: row;
   justify-content: flex-end;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 0.35rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 0.05rem;
 }
 
 .scorecard-item {
@@ -214,7 +217,7 @@
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-rows: minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 1.1fr) minmax(0, 1.15fr);
+  grid-template-rows: minmax(0, 1fr) minmax(0, 0.85fr) minmax(0, 1.25fr) minmax(0, 1.1fr);
   gap: var(--log-gap);
   overflow: hidden;
 }
@@ -256,7 +259,8 @@
 }
 
 .btn-grid--distance {
-  grid-template-rows: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(2, 1fr);
 }
 
 .pick-btn {
@@ -299,28 +303,22 @@
 }
 
 .score-grid {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-content: center;
-  gap: clamp(0.3rem, 0.9vh, 0.4rem);
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: repeat(2, minmax(clamp(44px, 7vh, 52px), 1fr));
+  gap: clamp(0.3rem, 1vh, 0.45rem);
+  align-content: stretch;
+  align-items: stretch;
   height: 100%;
   width: 100%;
-  padding: 0.1rem 0;
-}
-
-.score-grid .score-btn {
-  flex: 0 1 calc(14.28% - 0.35rem);
-  min-width: 2.5rem;
-  max-width: 3.75rem;
 }
 
 .score-btn {
   width: 100%;
-  min-height: clamp(34px, 5vh, 42px);
-  height: auto;
-  padding: 0.35rem 0.15rem;
-  font-size: clamp(0.8rem, 2.8vw, 1rem);
+  min-height: clamp(44px, 7vh, 52px);
+  height: 100%;
+  padding: 0.4rem 0.2rem;
+  font-size: clamp(0.95rem, 3.5vw, 1.15rem);
   font-weight: 800;
   border-radius: 999px;
   border: 2px solid var(--border);
@@ -389,10 +387,14 @@
     font-size: 0.8rem;
   }
 
-  .score-grid .score-btn {
-    flex: 0 1 calc(20% - 0.4rem);
-    min-width: 2.75rem;
-    max-width: 4.25rem;
+  .score-grid {
+    grid-template-columns: repeat(7, 1fr);
+    grid-template-rows: repeat(2, minmax(48px, 1fr));
+  }
+
+  .score-btn {
+    min-height: 48px;
+    font-size: 1.1rem;
   }
 
   .tab-btn {
@@ -420,8 +422,8 @@
   }
 
   .score-btn {
-    min-height: 40px;
-    font-size: 1rem;
+    min-height: 52px;
+    font-size: 1.15rem;
   }
 }
 
