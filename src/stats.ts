@@ -1,3 +1,4 @@
+import { getGamePlayerIds } from './teams';
 import type { AppData, Game, Outcome, Player, Shot, ShotType } from './types';
 import { OUTCOMES, SHOT_TYPES } from './types';
 
@@ -37,9 +38,13 @@ export function computePlayerStats(data: AppData, playerId: string): PlayerStats
     (g) => g.mode === 'game' && g.endedAt !== null,
   );
   const gamesPlayed = competitiveGames.filter((g) =>
-    g.playerIds.includes(playerId),
+    getGamePlayerIds(g).includes(playerId),
   ).length;
-  const wins = competitiveGames.filter((g) => g.winnerId === playerId).length;
+  const wins = competitiveGames.filter((g) => {
+    if (!g.winnerTeamId) return false;
+    const team = g.teams.find((t) => t.id === g.winnerTeamId);
+    return team?.playerIds.includes(playerId) ?? false;
+  }).length;
   const practiceShots = shots.filter((s) => {
     const game = data.games.find((g) => g.id === s.gameId);
     return game?.mode === 'practice';

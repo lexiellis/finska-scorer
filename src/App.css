@@ -519,6 +519,112 @@
   padding: 1.5rem 0;
 }
 
+.team-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.team-setup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.team-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.team-card-header {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.team-name-input {
+  flex: 1;
+  min-height: 40px;
+}
+
+.team-warning {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--danger);
+}
+
+.unassigned-hint {
+  color: #e65100;
+}
+
+.team-throw-group {
+  margin-bottom: 0.75rem;
+}
+
+.team-throw-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.team-throw-name {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.team-throw-score {
+  font-weight: 700;
+  color: var(--primary);
+  font-size: 0.9rem;
+}
+
+.miss-streak {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--bg);
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+}
+
+.miss-streak-hot {
+  color: #fff;
+  background: #e65100;
+}
+
+.scoreboard-miss {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #e65100;
+}
+
+.eliminated-note {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.flash-danger {
+  color: var(--danger);
+}
+
+.practice-miss-banner {
+  background: #ffebee;
+}
+
+.practice-miss-banner p {
+  color: var(--danger);
+}
+
 @media (min-width: 600px) {
   .score-grid {
     grid-template-columns: repeat(13, 1fr);

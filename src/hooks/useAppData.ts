@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { applyFinskaScore } from '../scoring';
 import { createId, loadData, saveData } from '../storage';
-import type { AppData, Distance, Game, Outcome, Player, Shot, ShotType } from '../types';
+import {
+  getTeamForPlayer,
+  recomputeGameState,
+} from '../teams';
+import type { AppData, Distance, Game, Outcome, Player, Shot, ShotType, Team } from '../types';
 
 export function useAppData() {
   const [data, setData] = useState<AppData>(loadData);
@@ -33,15 +37,16 @@ export function useAppData() {
     }));
   }, [update]);
 
-  const startGame = useCallback((playerIds: string[]) => {
-    if (playerIds.length < 2) return null;
-    const scores = Object.fromEntries(playerIds.map((id) => [id, 0]));
+  const startGame = useCallback((teams: Team[]) => {
+    if (teams.length < 2 || teams.some((t) => t.playerIds.length < 1)) return null;
+    const scores = Object.fromEntries(teams.map((t) => [t.id, 0]));
     const game: Game = {
       id: createId(),
       mode: 'game',
-      playerIds,
+      teams,
       scores,
-      winnerId: null,
+      eliminatedTeamIds: [],
+      winnerTeamId: null,
       startedAt: new Date().toISOString(),
       endedAt: null,
     };
@@ -50,12 +55,18 @@ export function useAppData() {
   }, [update]);
 
   const startPractice = useCallback((playerId: string) => {
+    const team: Team = {
+      id: createId(),
+      name: '',
+      playerIds: [playerId],
+    };
     const game: Game = {
       id: createId(),
       mode: 'practice',
-      playerIds: [playerId],
-      scores: { [playerId]: 0 },
-      winnerId: null,
+      teams: [team],
+      scores: { [team.id]: 0 },
+      eliminatedTeamIds: [],
+      winnerTeamId: null,
       startedAt: new Date().toISOString(),
       endedAt: null,
     };
@@ -63,12 +74,12 @@ export function useAppData() {
     return game;
   }, [update]);
 
-  const endGame = useCallback((gameId: string, winnerId: string) => {
+  const endGame = useCallback((gameId: string, winnerTeamId: string) => {
     update((prev) => ({
       ...prev,
       games: prev.games.map((g) =>
         g.id === gameId
-          ? { ...g, winnerId, endedAt: new Date().toISOString() }
+          ? { ...g, winnerTeamId, endedAt: new Date().toISOString() }
           : g,
       ),
     }));
@@ -91,15 +102,26 @@ export function useAppData() {
     }));
   }, [update]);
 
-  const resetPracticeRound = useCallback((gameId: string, playerId: string) => {
-    update((prev) => ({
-      ...prev,
-      games: prev.games.map((g) =>
-        g.id === gameId
-          ? { ...g, scores: { ...g.scores, [playerId]: 0 } }
-          : g,
-      ),
-    }));
+  const resetPracticeRound = useCallback((gameId: string) => {
+    update((prev) => {
+      const game = prev.games.find((g) => g.id === gameId);
+      if (!game || game.mode !== 'practice') return prev;
+      const teamId = game.teams[0]?.id;
+      if (!teamId) return prev;
+      const remainingShots = prev.shots.filter((s) => s.gameId !== gameId);
+      const clearedGame: Game = {
+        ...game,
+        scores: { [teamId]: 0 },
+        eliminatedTeamIds: [],
+        winnerTeamId: null,
+        endedAt: null,
+      };
+      return {
+        ...prev,
+        shots: remainingShots,
+        games: prev.games.map((g) => (g.id === gameId ? clearedGame : g)),
+      };
+    });
   }, [update]);
 
   const logShot = useCallback(
@@ -112,19 +134,24 @@ export function useAppData() {
       outcome: Outcome;
     }) => {
       let resultShot: Shot | null = null;
-      let scoreEvent: ReturnType<typeof applyFinskaScore>['event'] = 'normal';
+      let scoreEvent: ReturnType<typeof applyFinskaScore>['event'] | 'miss_loss' = 'normal';
+      let newScore: number | null = null;
+      let missStreak = 0;
 
       update((prev) => {
         const game = prev.games.find((g) => g.id === params.gameId);
         if (!game || game.endedAt) return prev;
 
-        const scoreBefore = game.scores[params.playerId] ?? 0;
-        const { newScore, event } = applyFinskaScore(scoreBefore, params.score);
-        scoreEvent = event;
+        const team = getTeamForPlayer(game, params.playerId);
+        if (!team) return prev;
+
+        const scoreBefore = game.scores[team.id] ?? 0;
+        const isMiss = params.outcome === 'Miss';
 
         const shot: Shot = {
           id: createId(),
           gameId: params.gameId,
+          teamId: team.id,
           playerId: params.playerId,
           shotType: params.shotType,
           distance: params.distance,
@@ -132,65 +159,82 @@ export function useAppData() {
           outcome: params.outcome,
           recordedAt: new Date().toISOString(),
           scoreBefore,
-          scoreAfter: newScore,
+          scoreAfter: isMiss ? scoreBefore : scoreBefore,
         };
-        resultShot = shot;
 
-        let games = prev.games.map((g) =>
-          g.id === params.gameId
-            ? {
-                ...g,
-                scores: { ...g.scores, [params.playerId]: newScore },
-                ...(g.mode === 'game' && event === 'win'
-                  ? {
-                      winnerId: params.playerId,
-                      endedAt: new Date().toISOString(),
-                    }
-                  : {}),
-              }
-            : g,
-        );
+        if (!isMiss) {
+          const applied = applyFinskaScore(scoreBefore, params.score);
+          shot.scoreAfter = applied.newScore;
+          scoreEvent = applied.event;
+          newScore = applied.newScore;
+        } else {
+          scoreEvent = 'normal';
+          newScore = scoreBefore;
+        }
+
+        resultShot = shot;
+        const allShots = [...prev.shots, shot];
+        const state = recomputeGameState(game, allShots);
+
+        if (state.endReason === 'three_misses') {
+          scoreEvent = 'miss_loss';
+        } else if (state.endReason === 'win_50') {
+          scoreEvent = 'win';
+        } else if (!isMiss) {
+          const applied = applyFinskaScore(scoreBefore, params.score);
+          if (applied.event === 'bust') scoreEvent = 'bust';
+        }
+
+        missStreak = state.missStreaks[team.id] ?? 0;
+
+        const updatedGame: Game = {
+          ...game,
+          scores: state.scores,
+          eliminatedTeamIds: state.eliminatedTeamIds,
+          winnerTeamId: state.winnerTeamId,
+          endedAt: state.isEnded ? new Date().toISOString() : null,
+        };
 
         return {
           ...prev,
-          shots: [...prev.shots, shot],
-          games,
+          shots: allShots,
+          games: prev.games.map((g) => (g.id === params.gameId ? updatedGame : g)),
         };
       });
 
-      const newScore =
-        resultShot && 'scoreAfter' in resultShot
-          ? (resultShot as Shot).scoreAfter
-          : null;
-      return { shot: resultShot, event: scoreEvent, newScore };
+      return { shot: resultShot, event: scoreEvent, newScore, missStreak };
     },
     [update],
   );
 
   const undoLastShot = useCallback((gameId: string) => {
     update((prev) => {
+      const game = prev.games.find((g) => g.id === gameId);
+      if (!game) return prev;
+
       const gameShots = prev.shots
         .filter((s) => s.gameId === gameId)
         .sort((a, b) => b.recordedAt.localeCompare(a.recordedAt));
       const last = gameShots[0];
       if (!last) return prev;
 
-      const game = prev.games.find((g) => g.id === gameId);
-      if (!game) return prev;
-
-      const restoreScore =
-        last.scoreBefore !== undefined ? last.scoreBefore : Math.max(0, (game.scores[last.playerId] ?? 0) - last.score);
+      const remainingShots = prev.shots.filter((s) => s.id !== last.id);
+      const state = recomputeGameState(
+        { ...game, eliminatedTeamIds: [], winnerTeamId: null, endedAt: null },
+        remainingShots,
+      );
 
       return {
         ...prev,
-        shots: prev.shots.filter((s) => s.id !== last.id),
+        shots: remainingShots,
         games: prev.games.map((g) =>
           g.id === gameId
             ? {
                 ...g,
-                scores: { ...g.scores, [last.playerId]: restoreScore },
-                winnerId: null,
-                endedAt: null,
+                scores: state.scores,
+                eliminatedTeamIds: state.eliminatedTeamIds,
+                winnerTeamId: state.winnerTeamId,
+                endedAt: state.isEnded ? g.endedAt : null,
               }
             : g,
         ),

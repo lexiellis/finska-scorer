@@ -36,9 +36,16 @@ export interface Player {
   createdAt: string;
 }
 
+export interface Team {
+  id: string;
+  name: string;
+  playerIds: string[];
+}
+
 export interface Shot {
   id: string;
   gameId: string;
+  teamId: string;
   playerId: string;
   shotType: ShotType;
   distance: Distance;
@@ -53,11 +60,16 @@ export interface Shot {
 export interface Game {
   id: string;
   mode: GameMode;
-  playerIds: string[];
+  teams: Team[];
   scores: Record<string, number>;
-  winnerId: string | null;
+  eliminatedTeamIds: string[];
+  winnerTeamId: string | null;
   startedAt: string;
   endedAt: string | null;
+  /** @deprecated Migrated from pre-team games */
+  playerIds?: string[];
+  /** @deprecated Use winnerTeamId */
+  winnerId?: string | null;
 }
 
 export interface AppData {

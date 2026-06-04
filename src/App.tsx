@@ -44,7 +44,7 @@ export default function App() {
             onEndGame={endGame}
             onEndPractice={endPractice}
             onAbandonGame={abandonGame}
-            onResetPracticeRound={resetPracticeRound}
+            onResetPracticeRound={(gameId) => resetPracticeRound(gameId)}
             onLogShot={logShot}
             onUndo={undoLastShot}
           />

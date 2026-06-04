@@ -1,26 +1,35 @@
 import { useEffect, useState } from 'react';
 import { FINSKA_TARGET, scoreEventMessage } from '../scoring';
 import { getActiveGame } from '../stats';
-import type { AppData, Distance, Game, Outcome, ShotType } from '../types';
+import {
+  CONSECUTIVE_MISS_LIMIT,
+  getActiveTeams,
+  getGamePlayerIds,
+  recomputeGameState,
+  teamDisplayName,
+} from '../teams';
+import type { AppData, Distance, Game, Outcome, ShotType, Team } from '../types';
 import { DISTANCES, OUTCOMES, SHOT_TYPES } from '../types';
 import { OptionGrid } from './OptionGrid';
 import { ScorePicker } from './ScorePicker';
 import { ScoringRules } from './ScoringRules';
+import { TeamSetup } from './TeamSetup';
 
 interface LogShotResult {
   shot: { id: string } | null;
-  event: 'normal' | 'bust' | 'win';
+  event: 'normal' | 'bust' | 'win' | 'miss_loss';
   newScore: number | null;
+  missStreak: number;
 }
 
 interface GamePanelProps {
   data: AppData;
-  onStartGame: (playerIds: string[]) => void;
+  onStartGame: (teams: Team[]) => void;
   onStartPractice: (playerId: string) => void;
-  onEndGame: (gameId: string, winnerId: string) => void;
+  onEndGame: (gameId: string, winnerTeamId: string) => void;
   onEndPractice: (gameId: string) => void;
   onAbandonGame: (gameId: string) => void;
-  onResetPracticeRound: (gameId: string, playerId: string) => void;
+  onResetPracticeRound: (gameId: string) => void;
   onLogShot: (params: {
     gameId: string;
     playerId: string;
@@ -44,7 +53,6 @@ export function GamePanel({
   onUndo,
 }: GamePanelProps) {
   const activeGame = getActiveGame(data);
-  const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
   const [practicePlayerId, setPracticePlayerId] = useState<string | null>(null);
   const [activePlayerId, setActivePlayerId] = useState<string | null>(null);
   const [shotType, setShotType] = useState<ShotType | null>(null);
@@ -52,8 +60,9 @@ export function GamePanel({
   const [score, setScore] = useState<number | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [flash, setFlash] = useState('');
-  const [flashKind, setFlashKind] = useState<'info' | 'bust' | 'win'>('info');
+  const [flashKind, setFlashKind] = useState<'info' | 'bust' | 'win' | 'danger'>('info');
   const [practiceHit50, setPracticeHit50] = useState(false);
+  const [practiceMissOut, setPracticeMissOut] = useState(false);
   const [completedGameId, setCompletedGameId] = useState<string | null>(null);
 
   const completedGame = completedGameId
@@ -63,19 +72,17 @@ export function GamePanel({
   const sessionGame = activeGame ?? completedGame;
 
   useEffect(() => {
-    if (activeGame && !activePlayerId) {
-      setActivePlayerId(activeGame.playerIds[0] ?? null);
+    if (activeGame) {
+      const ids = getGamePlayerIds(activeGame);
+      if (!activePlayerId || !ids.includes(activePlayerId)) {
+        setActivePlayerId(ids[0] ?? null);
+      }
     }
     if (!activeGame && !completedGameId) {
       setPracticeHit50(false);
+      setPracticeMissOut(false);
     }
   }, [activeGame, activePlayerId, completedGameId]);
-
-  const togglePlayer = (id: string) => {
-    setSelectedPlayers((prev) =>
-      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id],
-    );
-  };
 
   const resetShotForm = () => {
     setShotType(null);
@@ -84,11 +91,14 @@ export function GamePanel({
     setOutcome(null);
   };
 
-  const showFlash = (message: string, kind: 'info' | 'bust' | 'win' = 'info') => {
+  const showFlash = (
+    message: string,
+    kind: 'info' | 'bust' | 'win' | 'danger' = 'info',
+  ) => {
     setFlash(message);
     setFlashKind(kind);
     if (kind !== 'win') {
-      setTimeout(() => setFlash(''), 3500);
+      setTimeout(() => setFlash(''), 4000);
     }
   };
 
@@ -106,8 +116,12 @@ export function GamePanel({
     }
 
     const player = data.players.find((p) => p.id === activePlayerId);
-    const name = player?.name ?? 'player';
-    const { event, newScore } = onLogShot({
+    const team = activeGame.teams.find((t) => t.playerIds.includes(activePlayerId));
+    const teamLabel = team
+      ? teamDisplayName(team, data.players)
+      : (player?.name ?? 'Team');
+
+    const { event, newScore, missStreak } = onLogShot({
       gameId: activeGame.id,
       playerId: activePlayerId,
       shotType,
@@ -116,27 +130,57 @@ export function GamePanel({
       outcome,
     });
 
-    let message = scoreEventMessage(event, name, score);
-    if (event === 'normal' && newScore !== null && score > 0) {
-      message = `${name}: ${message} (now ${newScore}/${FINSKA_TARGET})`;
+    let message = scoreEventMessage(event, teamLabel, score);
+    if (event === 'normal' && outcome === 'Miss') {
+      message = `${teamLabel}: miss (${missStreak}/${CONSECUTIVE_MISS_LIMIT} in a row)`;
+    } else if (event === 'normal' && newScore !== null && score > 0) {
+      message = `${teamLabel}: ${message} (now ${newScore}/${FINSKA_TARGET})`;
     }
-    showFlash(message, event === 'win' ? 'win' : event === 'bust' ? 'bust' : 'info');
+
+    const kind =
+      event === 'win'
+        ? 'win'
+        : event === 'miss_loss'
+          ? 'danger'
+          : event === 'bust'
+            ? 'bust'
+            : 'info';
+    showFlash(message, kind);
     resetShotForm();
 
-    if (activeGame.mode === 'game' && event === 'win') {
+    if (activeGame.mode === 'game' && (event === 'win' || event === 'miss_loss')) {
       setCompletedGameId(activeGame.id);
     }
     if (activeGame.mode === 'practice' && event === 'win') {
       setPracticeHit50(true);
     }
+    if (activeGame.mode === 'practice' && event === 'miss_loss') {
+      setPracticeMissOut(true);
+    }
   };
 
-  if (completedGame?.winnerId && completedGame.endedAt) {
-    const winner = data.players.find((p) => p.id === completedGame.winnerId);
+  if (completedGame?.winnerTeamId && completedGame.endedAt) {
+    const winnerTeam = completedGame.teams.find(
+      (t) => t.id === completedGame.winnerTeamId,
+    );
+    const winnerName = winnerTeam
+      ? teamDisplayName(winnerTeam, data.players)
+      : 'Team';
+    const eliminated = completedGame.teams.find((t) =>
+      completedGame.eliminatedTeamIds.includes(t.id),
+    );
+    const byMisses =
+      eliminated &&
+      completedGame.winnerTeamId !== eliminated.id;
+
     return (
       <div className="panel">
         <section className="end-game game-finished">
-          <p className="flash-win">{winner?.name ?? 'Player'} hit {FINSKA_TARGET} and wins!</p>
+          <p className="flash-win">
+            {byMisses
+              ? `${teamDisplayName(eliminated, data.players)} — 3 misses. ${winnerName} wins!`
+              : `${winnerName} hit ${FINSKA_TARGET} and wins!`}
+          </p>
           <ScoringRules compact />
           <button
             type="button"
@@ -159,7 +203,7 @@ export function GamePanel({
         <header className="panel-header">
           <h2>Play or practice</h2>
           <p className="panel-subtitle">
-            Competitive game (2+ players) or solo practice — stats log either way.
+            Set up teams for competitive play, or practice solo. Stats log either way.
           </p>
         </header>
 
@@ -200,33 +244,14 @@ export function GamePanel({
             </section>
 
             <section className="start-section">
-              <h3 className="field-label">Competitive game</h3>
-              <p className="section-hint">Pick 2+ players. First to {FINSKA_TARGET} exactly wins.</p>
-              <div className="player-chips">
-                {data.players.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    className={`chip ${selectedPlayers.includes(p.id) ? 'selected' : ''}`}
-                    onClick={() => togglePlayer(p.id)}
-                  >
-                    {p.name}
-                  </button>
-                ))}
-              </div>
-              <button
-                type="button"
-                className="btn primary large"
-                disabled={selectedPlayers.length < 2}
-                onClick={() => {
-                  const first = selectedPlayers[0] ?? null;
-                  onStartGame(selectedPlayers);
-                  setSelectedPlayers([]);
-                  setActivePlayerId(first);
-                }}
-              >
-                Start game
-              </button>
+              {data.players.length < 2 ? (
+                <>
+                  <h3 className="field-label">Competitive game</h3>
+                  <p className="empty-state">Add at least two players for team games.</p>
+                </>
+              ) : (
+                <TeamSetup players={data.players} onStart={onStartGame} />
+              )}
             </section>
           </>
         )}
@@ -235,6 +260,9 @@ export function GamePanel({
   }
 
   const isPractice = sessionGame.mode === 'practice';
+  const liveShots = data.shots.filter((s) => s.gameId === sessionGame.id);
+  const liveState = recomputeGameState(sessionGame, liveShots);
+  const throwTeams = isPractice ? sessionGame.teams : getActiveTeams(sessionGame);
 
   return (
     <div className="panel game-panel">
@@ -245,31 +273,51 @@ export function GamePanel({
         <ScoringRules compact />
       </div>
 
-      <GameScoreboard game={sessionGame} players={data.players} />
+      <GameScoreboard
+        game={sessionGame}
+        players={data.players}
+        missStreaks={liveState.missStreaks}
+      />
 
-      {!isPractice && (
-        <section className="field-section">
-          <h3 className="field-label">Who threw?</h3>
-          <div className="player-chips">
-            {sessionGame.playerIds.map((id) => {
-              const p = data.players.find((pl) => pl.id === id);
-              if (!p) return null;
-              const pts = sessionGame.scores[id] ?? 0;
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  className={`chip ${activePlayerId === id ? 'selected' : ''} ${pts >= FINSKA_TARGET - 6 && pts < FINSKA_TARGET ? 'near-win' : ''}`}
-                  onClick={() => setActivePlayerId(id)}
-                >
-                  {p.name}
-                  <span className="chip-score">{pts}</span>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-      )}
+      <section className="field-section">
+        <h3 className="field-label">Who threw?</h3>
+        {throwTeams.map((team) => {
+          const pts = sessionGame.scores[team.id] ?? 0;
+          const streak = liveState.missStreaks[team.id] ?? 0;
+          return (
+            <div key={team.id} className="team-throw-group">
+              <div className="team-throw-header">
+                <span className="team-throw-name">{teamDisplayName(team, data.players)}</span>
+                <span className="team-throw-score">
+                  {pts}
+                  <span className="score-target">/{FINSKA_TARGET}</span>
+                </span>
+                {streak > 0 && (
+                  <span className={`miss-streak ${streak >= 2 ? 'miss-streak-hot' : ''}`}>
+                    {streak} miss{streak > 1 ? 'es' : ''}
+                  </span>
+                )}
+              </div>
+              <div className="player-chips">
+                {team.playerIds.map((id) => {
+                  const p = data.players.find((pl) => pl.id === id);
+                  if (!p) return null;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      className={`chip ${activePlayerId === id ? 'selected' : ''} ${pts >= FINSKA_TARGET - 6 && pts < FINSKA_TARGET ? 'near-win' : ''}`}
+                      onClick={() => setActivePlayerId(id)}
+                    >
+                      {p.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </section>
 
       <OptionGrid
         label="Shot type"
@@ -304,7 +352,7 @@ export function GamePanel({
         </p>
       )}
 
-      {practiceHit50 && isPractice && activePlayerId && activeGame && (
+      {practiceHit50 && isPractice && activeGame && (
         <section className="practice-win-banner">
           <p>You hit {FINSKA_TARGET} in practice!</p>
           <div className="action-row">
@@ -312,7 +360,7 @@ export function GamePanel({
               type="button"
               className="btn primary"
               onClick={() => {
-                onResetPracticeRound(activeGame.id, activePlayerId);
+                onResetPracticeRound(activeGame.id);
                 setPracticeHit50(false);
                 setFlash('');
               }}
@@ -333,7 +381,36 @@ export function GamePanel({
         </section>
       )}
 
-      {activeGame && (
+      {practiceMissOut && isPractice && activeGame && (
+        <section className="practice-win-banner practice-miss-banner">
+          <p>3 misses in a row — practice round over.</p>
+          <div className="action-row">
+            <button
+              type="button"
+              className="btn primary"
+              onClick={() => {
+                onResetPracticeRound(activeGame.id);
+                setPracticeMissOut(false);
+                setFlash('');
+              }}
+            >
+              Try again
+            </button>
+            <button
+              type="button"
+              className="btn secondary"
+              onClick={() => {
+                onEndPractice(activeGame.id);
+                setPracticeMissOut(false);
+              }}
+            >
+              End practice
+            </button>
+          </div>
+        </section>
+      )}
+
+      {activeGame && !practiceHit50 && !practiceMissOut && (
         <>
           <div className="action-row">
             <button type="button" className="btn primary large" onClick={handleLogShot}>
@@ -370,24 +447,32 @@ export function GamePanel({
 function GameScoreboard({
   game,
   players,
+  missStreaks,
 }: {
   game: Game;
   players: AppData['players'];
+  missStreaks: Record<string, number>;
 }) {
-  const sorted = [...game.playerIds].sort(
-    (a, b) => (game.scores[b] ?? 0) - (game.scores[a] ?? 0),
+  const teamsToShow = game.mode === 'practice' ? game.teams : getActiveTeams(game);
+  const sorted = teamsToShow.sort(
+    (a, b) => (game.scores[b.id] ?? 0) - (game.scores[a.id] ?? 0),
   );
 
   return (
     <header className="scoreboard">
-      <h2>{game.mode === 'practice' ? 'Practice score' : 'Live scores'}</h2>
+      <h2>{game.mode === 'practice' ? 'Practice score' : 'Team scores'}</h2>
       <ul className="scoreboard-list">
-        {sorted.map((id) => {
-          const p = players.find((pl) => pl.id === id);
-          const pts = game.scores[id] ?? 0;
+        {sorted.map((team) => {
+          const pts = game.scores[team.id] ?? 0;
+          const streak = missStreaks[team.id] ?? 0;
           return (
-            <li key={id} className={pts === FINSKA_TARGET ? 'at-target' : ''}>
-              <span>{p?.name ?? 'Unknown'}</span>
+            <li key={team.id} className={pts === FINSKA_TARGET ? 'at-target' : ''}>
+              <span>
+                {teamDisplayName(team, players)}
+                {streak > 0 && (
+                  <span className="scoreboard-miss"> · {streak} miss streak</span>
+                )}
+              </span>
               <strong>
                 {pts}
                 <span className="score-target"> / {FINSKA_TARGET}</span>
@@ -396,6 +481,18 @@ function GameScoreboard({
           );
         })}
       </ul>
+      {game.eliminatedTeamIds.length > 0 && (
+        <p className="eliminated-note">
+          Out:{' '}
+          {game.eliminatedTeamIds
+            .map((id) => {
+              const t = game.teams.find((tm) => tm.id === id);
+              return t ? teamDisplayName(t, players) : '';
+            })
+            .filter(Boolean)
+            .join(', ')}
+        </p>
+      )}
     </header>
   );
 }
@@ -427,7 +524,7 @@ function EndGameSection({
 }: {
   game: Game;
   players: AppData['players'];
-  onEnd: (gameId: string, winnerId: string) => void;
+  onEnd: (gameId: string, winnerTeamId: string) => void;
   onAbandon: (gameId: string) => void;
 }) {
   const [showEnd, setShowEnd] = useState(false);
@@ -442,24 +539,21 @@ function EndGameSection({
 
   return (
     <section className="end-game">
-      <h3>Game over — who won?</h3>
+      <h3>Game over — which team won?</h3>
       <div className="player-chips">
-        {game.playerIds.map((id) => {
-          const p = players.find((pl) => pl.id === id);
-          return (
-            <button
-              key={id}
-              type="button"
-              className="chip selected-outline"
-              onClick={() => {
-                onEnd(game.id, id);
-                setShowEnd(false);
-              }}
-            >
-              {p?.name} won
-            </button>
-          );
-        })}
+        {getActiveTeams(game).map((team) => (
+          <button
+            key={team.id}
+            type="button"
+            className="chip selected-outline"
+            onClick={() => {
+              onEnd(game.id, team.id);
+              setShowEnd(false);
+            }}
+          >
+            {teamDisplayName(team, players)} won
+          </button>
+        ))}
       </div>
       <button
         type="button"

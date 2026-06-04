@@ -1,7 +1,7 @@
 export const FINSKA_TARGET = 50;
 export const FINSKA_BUST_SCORE = 25;
 
-export type ScoreEvent = 'normal' | 'bust' | 'win';
+export type ScoreEvent = 'normal' | 'bust' | 'win' | 'miss_loss';
 
 export interface ScoreResult {
   newScore: number;
@@ -23,12 +23,14 @@ export function applyFinskaScore(current: number, pins: number): ScoreResult {
 
 export function scoreEventMessage(
   event: ScoreEvent,
-  playerName: string,
+  label: string,
   pins: number,
 ): string {
   switch (event) {
     case 'win':
-      return `${playerName} hit 50 and wins!`;
+      return `${label} hit ${FINSKA_TARGET}!`;
+    case 'miss_loss':
+      return `${label} — 3 misses in a row!`;
     case 'bust':
       return `Over 50 with +${pins} — bust back to ${FINSKA_BUST_SCORE}`;
     default:
