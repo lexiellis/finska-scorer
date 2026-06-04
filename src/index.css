@@ -9,7 +9,11 @@
   --border: #d8e4dc;
   --danger: #c1121f;
   --radius: 14px;
-  --touch: 44px;
+  --touch: 48px;
+  --log-gap: clamp(0.4rem, 1.2vh, 0.65rem);
+  --section-pad: clamp(0.5rem, 1.4vh, 0.85rem);
+  --pick-font: clamp(0.75rem, 2.2vw, 0.95rem);
+  --pick-min-h: clamp(40px, 6.5vh, 56px);
   font-family:
     'Segoe UI',
     system-ui,

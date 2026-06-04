@@ -58,27 +58,32 @@ export function ShotLogForm({
         </p>
       )}
 
-      <div className="score-strip">
-        {teams.map((team) => {
-          const pts = game.scores[team.id] ?? 0;
-          const streak = missStreaks[team.id] ?? 0;
-          return (
-            <span
-              key={team.id}
-              className={`score-pill ${pts === FINSKA_TARGET ? 'at-target' : ''} ${streak >= 2 ? 'miss-hot' : ''}`}
-            >
-              <span className="score-pill-name">{teamDisplayName(team, players)}</span>
-              <span className="score-pill-pts">
-                {pts}
-                {streak > 0 && <em className="score-pill-miss">·{streak}m</em>}
-              </span>
-            </span>
-          );
-        })}
+      <header className="log-top">
+        <div className="score-strip">
+          {teams.map((team) => {
+            const pts = game.scores[team.id] ?? 0;
+            const streak = missStreaks[team.id] ?? 0;
+            return (
+              <div
+                key={team.id}
+                className={`score-pill ${pts === FINSKA_TARGET ? 'at-target' : ''} ${streak >= 2 ? 'miss-hot' : ''}`}
+              >
+                <span className="score-pill-name">{teamDisplayName(team, players)}</span>
+                <span className="score-pill-pts">
+                  {pts}
+                  <span className="score-pill-target">/{FINSKA_TARGET}</span>
+                  {streak > 0 && (
+                    <span className="score-pill-miss">{streak}×miss</span>
+                  )}
+                </span>
+              </div>
+            );
+          })}
+        </div>
         <button type="button" className="btn-icon" onClick={onEnd} aria-label="End session">
           ⋯
         </button>
-      </div>
+      </header>
 
       <div className="player-strip">
         {teams.flatMap((team) =>
@@ -99,73 +104,77 @@ export function ShotLogForm({
         )}
       </div>
 
-      <div className="log-block">
-        <span className="log-label">Type</span>
-        <div className="btn-grid cols-4">
-          {SHOT_TYPES.map((t) => (
-            <button
-              key={t}
-              type="button"
-              className={`pick-btn ${shotType === t ? 'selected' : ''}`}
-              onClick={() => onShotType(t)}
-            >
-              {SHOT_TYPE_SHORT[t]}
-            </button>
-          ))}
-        </div>
-      </div>
+      <div className="log-fields">
+        <section className="log-section">
+          <h3 className="log-section-title">Shot type</h3>
+          <div className="btn-grid cols-4">
+            {SHOT_TYPES.map((t) => (
+              <button
+                key={t}
+                type="button"
+                className={`pick-btn ${shotType === t ? 'selected' : ''}`}
+                onClick={() => onShotType(t)}
+              >
+                <span className="label-short">{SHOT_TYPE_SHORT[t]}</span>
+                <span className="label-full">{t}</span>
+              </button>
+            ))}
+          </div>
+        </section>
 
-      <div className="log-block">
-        <span className="log-label">m</span>
-        <div className="btn-grid cols-6">
-          {DISTANCES.map((d) => (
-            <button
-              key={String(d)}
-              type="button"
-              className={`pick-btn ${distance === d ? 'selected' : ''}`}
-              onClick={() => onDistance(d)}
-            >
-              {d === '12+' ? '12+' : d}
-            </button>
-          ))}
-        </div>
-      </div>
+        <section className="log-section">
+          <h3 className="log-section-title">Distance</h3>
+          <div className="btn-grid cols-6">
+            {DISTANCES.map((d) => (
+              <button
+                key={String(d)}
+                type="button"
+                className={`pick-btn ${distance === d ? 'selected' : ''}`}
+                onClick={() => onDistance(d)}
+              >
+                {d === '12+' ? '12+' : `${d}m`}
+              </button>
+            ))}
+          </div>
+        </section>
 
-      <div className="log-block log-block-score">
-        <span className="log-label">Pts</span>
-        <div className="score-row">
-          {Array.from({ length: 13 }, (_, i) => (
-            <button
-              key={i}
-              type="button"
-              className={`score-btn ${score === i ? 'selected' : ''}`}
-              onClick={() => onScore(i)}
-            >
-              {i}
-            </button>
-          ))}
-        </div>
-      </div>
+        <section className="log-section log-section--score">
+          <h3 className="log-section-title">Score</h3>
+          <div className="score-row">
+            {Array.from({ length: 13 }, (_, i) => (
+              <button
+                key={i}
+                type="button"
+                className={`score-btn ${score === i ? 'selected' : ''}`}
+                onClick={() => onScore(i)}
+                aria-label={`Score ${i}`}
+              >
+                {i}
+              </button>
+            ))}
+          </div>
+        </section>
 
-      <div className="log-block">
-        <span className="log-label">Out</span>
-        <div className="btn-grid cols-3">
-          {OUTCOMES.map((o) => (
-            <button
-              key={o}
-              type="button"
-              className={`pick-btn ${outcome === o ? 'selected' : ''}`}
-              onClick={() => onOutcome(o)}
-            >
-              {OUTCOME_SHORT[o]}
-            </button>
-          ))}
-        </div>
+        <section className="log-section">
+          <h3 className="log-section-title">Outcome</h3>
+          <div className="btn-grid cols-3">
+            {OUTCOMES.map((o) => (
+              <button
+                key={o}
+                type="button"
+                className={`pick-btn pick-btn--outcome ${outcome === o ? 'selected' : ''}`}
+                onClick={() => onOutcome(o)}
+              >
+                {OUTCOME_SHORT[o]}
+              </button>
+            ))}
+          </div>
+        </section>
       </div>
 
       <footer className="log-footer">
         <button type="button" className="btn primary log-btn" onClick={onLog}>
-          Log
+          Log shot
         </button>
         <button type="button" className="btn secondary log-btn" onClick={onUndo}>
           Undo

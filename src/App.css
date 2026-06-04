@@ -21,11 +21,11 @@
 }
 
 .app--logging .app-header {
-  padding: 0.3rem 0.6rem;
+  padding: 0.45rem 0.85rem;
 }
 
 .app--logging .app-header h1 {
-  font-size: 0.95rem;
+  font-size: 1.05rem;
 }
 
 .app-main {
@@ -69,7 +69,7 @@
 }
 
 .app-main--log {
-  padding: 0.2rem 0.35rem 0;
+  padding: clamp(0.35rem, 1vh, 0.65rem) clamp(0.5rem, 2vw, 1rem) 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -80,50 +80,74 @@
   position: relative;
   flex: 1;
   min-height: 0;
+  height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 0.22rem;
+  gap: var(--log-gap);
 }
 
 .shot-toast {
   position: absolute;
-  left: 0.35rem;
-  right: 0.35rem;
-  top: 0.2rem;
-  z-index: 5;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  z-index: 10;
   margin: 0;
-  padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.85rem;
   font-weight: 700;
   text-align: center;
   background: var(--surface);
-  border-radius: 8px;
+  border-radius: 999px;
   border: 1px solid var(--border);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 16px rgba(27, 67, 50, 0.12);
+  max-width: 92%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.log-top {
+  flex-shrink: 0;
+  display: flex;
+  align-items: stretch;
+  gap: 0.4rem;
 }
 
 .score-strip {
+  flex: 1;
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 0.25rem;
-  flex-shrink: 0;
+  gap: 0.35rem;
+  min-width: 0;
 }
 
 .score-pill {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.3rem;
-  padding: 0.2rem 0.45rem;
+  flex: 1 1 auto;
+  min-width: min(100%, 7rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.45rem 0.65rem;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font-size: 0.75rem;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(27, 67, 50, 0.06);
+}
+
+.score-pill.at-target {
+  border-color: var(--primary);
+  background: #e8f5e9;
+}
+
+.score-pill.miss-hot {
+  border-color: #e65100;
+  background: #fff8f5;
 }
 
 .score-pill-name {
   font-weight: 700;
-  max-width: 4.5rem;
+  font-size: clamp(0.8rem, 2.5vw, 0.95rem);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -131,64 +155,96 @@
 
 .score-pill-pts {
   font-weight: 800;
+  font-size: clamp(1.1rem, 4vw, 1.5rem);
   color: var(--primary);
+  line-height: 1.1;
+}
+
+.score-pill-target {
+  font-size: 0.7em;
+  font-weight: 600;
+  color: var(--text-muted);
 }
 
 .score-pill-miss {
-  font-style: normal;
-  font-size: 0.65rem;
-  color: #e65100;
+  display: inline-block;
+  margin-left: 0.35rem;
+  font-size: 0.7rem;
   font-weight: 700;
-}
-
-.score-pill.miss-hot {
-  border-color: #e65100;
+  color: #e65100;
+  vertical-align: middle;
 }
 
 .player-strip {
+  flex-shrink: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.2rem;
-  flex-shrink: 0;
+  gap: 0.35rem;
 }
 
 .player-pill {
-  padding: 0.25rem 0.55rem;
-  min-height: 32px;
+  padding: 0.4rem 0.9rem;
+  min-height: clamp(38px, 5.5vh, 48px);
   border-radius: 999px;
-  border: 1.5px solid var(--border);
+  border: 2px solid var(--border);
   background: var(--surface);
-  font-size: 0.8rem;
+  font-size: clamp(0.85rem, 2.5vw, 1rem);
   font-weight: 700;
   touch-action: manipulation;
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+}
+
+.player-pill:active {
+  transform: scale(0.97);
 }
 
 .player-pill.selected {
   border-color: var(--primary);
   background: var(--primary);
   color: #fff;
+  box-shadow: 0 2px 8px rgba(45, 106, 79, 0.25);
 }
 
-.log-block {
+.log-fields {
+  flex: 1;
+  min-height: 0;
   display: grid;
-  grid-template-columns: 1.6rem 1fr;
-  gap: 0.15rem 0.3rem;
-  align-items: center;
-  flex-shrink: 0;
+  grid-template-rows: repeat(4, 1fr);
+  gap: var(--log-gap);
 }
 
-.log-label {
-  font-size: 0.62rem;
-  font-weight: 800;
+.log-section {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: var(--section-pad);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 1px 4px rgba(27, 67, 50, 0.05);
+}
+
+.log-section-title {
+  flex-shrink: 0;
+  margin: 0 0 0.35rem;
+  font-size: clamp(0.68rem, 1.8vh, 0.8rem);
+  font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.06em;
   color: var(--text-muted);
-  text-align: right;
-  line-height: 1;
+}
+
+.log-section .btn-grid,
+.log-section .score-row {
+  flex: 1;
+  min-height: 0;
 }
 
 .btn-grid {
   display: grid;
-  gap: 0.18rem;
+  gap: clamp(0.25rem, 0.8vh, 0.4rem);
+  grid-auto-rows: 1fr;
+  height: 100%;
 }
 
 .btn-grid.cols-3 {
@@ -204,73 +260,175 @@
 }
 
 .pick-btn {
-  min-height: 32px;
-  padding: 0.1rem 0.05rem;
-  font-size: 0.68rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--pick-min-h);
+  padding: 0.25rem 0.35rem;
+  font-size: var(--pick-font);
   font-weight: 700;
-  border-radius: 7px;
-  border: 1.5px solid var(--border);
-  background: var(--surface);
+  line-height: 1.15;
+  text-align: center;
+  border-radius: 10px;
+  border: 2px solid var(--border);
+  background: var(--bg);
   color: var(--text);
   touch-action: manipulation;
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+}
+
+.pick-btn .label-full {
+  display: none;
+}
+
+.pick-btn:active {
+  transform: scale(0.98);
 }
 
 .pick-btn.selected {
   border-color: var(--primary);
   background: #e8f5e9;
   color: var(--primary);
+  box-shadow: inset 0 0 0 1px rgba(45, 106, 79, 0.15);
+}
+
+.log-section--score {
+  justify-content: flex-start;
 }
 
 .score-row {
   display: grid;
   grid-template-columns: repeat(13, 1fr);
-  gap: 0.12rem;
+  gap: clamp(0.2rem, 1vw, 0.45rem);
+  align-content: center;
+  align-items: center;
+  height: 100%;
 }
 
 .score-btn {
+  width: 100%;
+  max-height: 100%;
   aspect-ratio: 1;
-  min-width: 0;
-  min-height: 0;
+  justify-self: center;
   padding: 0;
-  font-size: 0.62rem;
+  font-size: clamp(0.7rem, 2.8vw, 1rem);
   font-weight: 800;
   border-radius: 50%;
-  border: 1.5px solid var(--border);
-  background: var(--surface);
+  border: 2px solid var(--border);
+  background: var(--bg);
   color: var(--text);
   touch-action: manipulation;
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+}
+
+.score-btn:active {
+  transform: scale(0.94);
 }
 
 .score-btn.selected {
   border-color: var(--primary);
   background: var(--primary);
   color: #fff;
+  box-shadow: 0 2px 6px rgba(45, 106, 79, 0.3);
 }
 
 .log-footer {
-  margin-top: auto;
   flex-shrink: 0;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.3rem;
-  padding-top: 0.15rem;
+  grid-template-columns: 1.4fr 1fr;
+  gap: clamp(0.35rem, 1vh, 0.55rem);
+  padding-top: 0.1rem;
 }
 
 .log-btn {
-  min-height: 42px;
-  font-size: 0.95rem;
+  min-height: clamp(48px, 7vh, 58px);
+  font-size: clamp(0.95rem, 2.5vw, 1.1rem);
 }
 
 .btn-icon {
-  margin-left: auto;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
+  flex-shrink: 0;
+  align-self: center;
+  width: clamp(40px, 6vh, 48px);
+  height: clamp(40px, 6vh, 48px);
+  border-radius: 12px;
+  border: 2px solid var(--border);
   background: var(--surface);
-  font-size: 1.1rem;
+  font-size: 1.25rem;
   line-height: 1;
   touch-action: manipulation;
+  box-shadow: 0 1px 3px rgba(27, 67, 50, 0.06);
+}
+
+/* Tablet and up: roomier layout, full labels */
+@media (min-width: 600px) {
+  .app-main--log {
+    padding: 0.65rem 1rem 0;
+  }
+
+  .shot-log {
+    gap: 0.55rem;
+  }
+
+  .log-fields {
+    gap: 0.55rem;
+  }
+
+  .pick-btn .label-short {
+    display: none;
+  }
+
+  .pick-btn:not(.pick-btn--outcome) .label-full {
+    display: inline;
+  }
+
+  .pick-btn--outcome {
+    font-size: clamp(0.72rem, 2vw, 0.88rem);
+  }
+
+  .btn-grid.cols-6 {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+@media (min-width: 768px) {
+  .app--logging .app-header h1 {
+    font-size: 1.2rem;
+  }
+
+  .log-section {
+    padding: 0.75rem 0.85rem;
+  }
+
+  .log-section-title {
+    margin-bottom: 0.5rem;
+    font-size: 0.8rem;
+  }
+
+  .score-pill {
+    min-width: 8rem;
+  }
+
+  .tab-btn {
+    min-height: 48px;
+    font-size: 0.9rem;
+  }
+}
+
+/* Short phones: allow slight scroll rather than crush controls */
+@media (max-height: 620px) {
+  .app-main--log {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .log-fields {
+    grid-template-rows: auto;
+    flex: none;
+  }
+
+  .log-section {
+    min-height: 5.5rem;
+  }
 }
 
 .menu-backdrop {
