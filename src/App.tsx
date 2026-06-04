@@ -7,10 +7,10 @@ import { getActiveGame } from './stats';
 import type { Tab } from './types';
 import './App.css';
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'game', label: 'Log' },
-  { id: 'stats', label: 'Stats' },
-  { id: 'players', label: 'Players' },
+const TABS: { id: Tab; label: string; icon: string }[] = [
+  { id: 'game', label: 'Log', icon: '🎯' },
+  { id: 'stats', label: 'Stats', icon: '📊' },
+  { id: 'players', label: 'Players', icon: '👥' },
 ];
 
 export default function App() {
@@ -69,6 +69,9 @@ export default function App() {
             className={`tab-btn ${tab === t.id ? 'active' : ''}`}
             onClick={() => setTab(t.id)}
           >
+            <span className="tab-icon" aria-hidden>
+              {t.icon}
+            </span>
             <span>{t.label}</span>
           </button>
         ))}

@@ -2,7 +2,6 @@ import { FINSKA_TARGET } from '../scoring';
 import { CONSECUTIVE_MISS_LIMIT, teamDisplayName } from '../teams';
 import type { AppData, Distance, Game, Outcome, ShotType } from '../types';
 import { DISTANCES, OUTCOMES, SHOT_TYPES } from '../types';
-import { OUTCOME_SHORT, SHOT_TYPE_SHORT } from '../labels';
 
 interface ShotLogFormProps {
   game: Game;
@@ -105,7 +104,7 @@ export function ShotLogForm({
       </div>
 
       <div className="log-fields">
-        <section className="log-section">
+        <section className="log-section log-section--type">
           <h3 className="log-section-title">Shot type</h3>
           <div className="btn-grid cols-4">
             {SHOT_TYPES.map((t) => (
@@ -115,21 +114,20 @@ export function ShotLogForm({
                 className={`pick-btn ${shotType === t ? 'selected' : ''}`}
                 onClick={() => onShotType(t)}
               >
-                <span className="label-short">{SHOT_TYPE_SHORT[t]}</span>
-                <span className="label-full">{t}</span>
+                {t}
               </button>
             ))}
           </div>
         </section>
 
-        <section className="log-section">
+        <section className="log-section log-section--distance">
           <h3 className="log-section-title">Distance</h3>
-          <div className="btn-grid cols-6">
+          <div className="btn-grid cols-4 btn-grid--distance">
             {DISTANCES.map((d) => (
               <button
                 key={String(d)}
                 type="button"
-                className={`pick-btn ${distance === d ? 'selected' : ''}`}
+                className={`pick-btn pick-btn--compact ${distance === d ? 'selected' : ''}`}
                 onClick={() => onDistance(d)}
               >
                 {d === '12+' ? '12+' : `${d}m`}
@@ -140,7 +138,7 @@ export function ShotLogForm({
 
         <section className="log-section log-section--score">
           <h3 className="log-section-title">Score</h3>
-          <div className="score-row">
+          <div className="score-grid">
             {Array.from({ length: 13 }, (_, i) => (
               <button
                 key={i}
@@ -155,17 +153,17 @@ export function ShotLogForm({
           </div>
         </section>
 
-        <section className="log-section">
+        <section className="log-section log-section--outcome">
           <h3 className="log-section-title">Outcome</h3>
-          <div className="btn-grid cols-3">
+          <div className="btn-grid cols-2">
             {OUTCOMES.map((o) => (
               <button
                 key={o}
                 type="button"
-                className={`pick-btn pick-btn--outcome ${outcome === o ? 'selected' : ''}`}
+                className={`pick-btn pick-btn--wrap ${outcome === o ? 'selected' : ''}`}
                 onClick={() => onOutcome(o)}
               >
-                {OUTCOME_SHORT[o]}
+                {o}
               </button>
             ))}
           </div>

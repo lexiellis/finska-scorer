@@ -47,20 +47,22 @@
 .tab-btn {
   flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 0.45rem;
-  min-height: 40px;
+  gap: 0.1rem;
+  padding: 0.35rem 0.25rem;
+  min-height: 48px;
   border-radius: 10px;
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   font-weight: 700;
   transition: background 0.15s, color 0.15s;
 }
 
-.app--logging .tab-btn {
-  min-height: 36px;
-  font-size: 0.75rem;
+.tab-icon {
+  font-size: 1.2rem;
+  line-height: 1;
 }
 
 .tab-btn.active {
@@ -209,14 +211,16 @@
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-rows: repeat(4, 1fr);
+  grid-template-rows: minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 1.1fr) minmax(0, 1.15fr);
   gap: var(--log-gap);
+  overflow: hidden;
 }
 
 .log-section {
   min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   padding: var(--section-pad);
   background: var(--surface);
   border: 1px solid var(--border);
@@ -235,39 +239,42 @@
 }
 
 .log-section .btn-grid,
-.log-section .score-row {
+.log-section .score-grid {
   flex: 1;
   min-height: 0;
+  overflow: hidden;
 }
 
 .btn-grid {
   display: grid;
-  gap: clamp(0.25rem, 0.8vh, 0.4rem);
-  grid-auto-rows: 1fr;
+  gap: clamp(0.2rem, 0.6vh, 0.35rem);
+  grid-auto-rows: minmax(0, 1fr);
+  align-content: stretch;
   height: 100%;
+  width: 100%;
 }
 
-.btn-grid.cols-3 {
-  grid-template-columns: repeat(3, 1fr);
+.btn-grid.cols-2 {
+  grid-template-columns: repeat(2, 1fr);
 }
 
 .btn-grid.cols-4 {
   grid-template-columns: repeat(4, 1fr);
 }
 
-.btn-grid.cols-6 {
-  grid-template-columns: repeat(6, 1fr);
+.btn-grid--distance {
+  grid-template-rows: repeat(3, 1fr);
 }
 
 .pick-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: var(--pick-min-h);
-  padding: 0.25rem 0.35rem;
-  font-size: var(--pick-font);
+  min-height: 0;
+  padding: 0.2rem 0.25rem;
+  font-size: clamp(0.68rem, 1.9vw, 0.88rem);
   font-weight: 700;
-  line-height: 1.15;
+  line-height: 1.1;
   text-align: center;
   border-radius: 10px;
   border: 2px solid var(--border);
@@ -277,8 +284,14 @@
   transition: border-color 0.15s, background 0.15s, transform 0.1s;
 }
 
-.pick-btn .label-full {
-  display: none;
+.pick-btn--compact {
+  font-size: clamp(0.75rem, 2.2vw, 0.95rem);
+}
+
+.pick-btn--wrap {
+  font-size: clamp(0.62rem, 1.7vw, 0.8rem);
+  line-height: 1.15;
+  padding: 0.25rem 0.35rem;
 }
 
 .pick-btn:active {
@@ -292,26 +305,25 @@
   box-shadow: inset 0 0 0 1px rgba(45, 106, 79, 0.15);
 }
 
-.log-section--score {
-  justify-content: flex-start;
-}
-
-.score-row {
+.score-grid {
   display: grid;
-  grid-template-columns: repeat(13, 1fr);
-  gap: clamp(0.2rem, 1vw, 0.45rem);
-  align-content: center;
-  align-items: center;
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: clamp(0.25rem, 1vh, 0.4rem);
+  align-content: stretch;
+  align-items: stretch;
   height: 100%;
+  width: 100%;
 }
 
 .score-btn {
   width: 100%;
-  max-height: 100%;
-  aspect-ratio: 1;
-  justify-self: center;
+  height: 100%;
+  min-height: 0;
+  max-height: none;
+  aspect-ratio: unset;
   padding: 0;
-  font-size: clamp(0.7rem, 2.8vw, 1rem);
+  font-size: clamp(0.8rem, 3vw, 1.05rem);
   font-weight: 800;
   border-radius: 50%;
   border: 2px solid var(--border);
@@ -359,7 +371,6 @@
   box-shadow: 0 1px 3px rgba(27, 67, 50, 0.06);
 }
 
-/* Tablet and up: roomier layout, full labels */
 @media (min-width: 600px) {
   .app-main--log {
     padding: 0.65rem 1rem 0;
@@ -373,20 +384,27 @@
     gap: 0.55rem;
   }
 
-  .pick-btn .label-short {
-    display: none;
+  .pick-btn {
+    font-size: 0.85rem;
   }
 
-  .pick-btn:not(.pick-btn--outcome) .label-full {
-    display: inline;
+  .pick-btn--wrap {
+    font-size: 0.8rem;
   }
 
-  .pick-btn--outcome {
-    font-size: clamp(0.72rem, 2vw, 0.88rem);
+  /* 5 + 5 + 3 across three rows on tablet */
+  .score-grid {
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(3, 1fr);
   }
 
-  .btn-grid.cols-6 {
-    grid-template-columns: repeat(6, 1fr);
+  .tab-btn {
+    min-height: 52px;
+    font-size: 0.75rem;
+  }
+
+  .tab-icon {
+    font-size: 1.35rem;
   }
 }
 
@@ -408,9 +426,8 @@
     min-width: 8rem;
   }
 
-  .tab-btn {
-    min-height: 48px;
-    font-size: 0.9rem;
+  .score-btn {
+    font-size: 1.1rem;
   }
 }
 
