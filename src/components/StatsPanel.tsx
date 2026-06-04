@@ -78,7 +78,9 @@ export function StatsPanel({ data }: StatsPanelProps) {
     <div className="panel stats-panel">
       <header className="panel-header">
         <h2>Stats</h2>
-        <p className="panel-subtitle">Win rate, shot breakdowns, and trends.</p>
+        <p className="panel-subtitle">
+          Win rate from competitive games only. Practice shots count in shot stats.
+        </p>
       </header>
 
       <div className="player-chips">
@@ -126,6 +128,12 @@ export function StatsPanel({ data }: StatsPanelProps) {
               <span className="stat-value">{stats.totalShots}</span>
               <span className="stat-label">Shots logged</span>
             </div>
+            {stats.practiceShots > 0 && (
+              <div className="stat-card">
+                <span className="stat-value">{stats.practiceShots}</span>
+                <span className="stat-label">Practice shots</span>
+              </div>
+            )}
             <div className="stat-card">
               <span className="stat-value">{stats.avgScorePerShot.toFixed(1)}</span>
               <span className="stat-label">Avg pts/shot</span>

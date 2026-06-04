@@ -1,0 +1,42 @@
+---
+description: Commit and push to origin after completing work in this repo
+alwaysApply: true
+---
+
+# Auto commit and push
+
+After you finish a task that changes project files, **commit and push without waiting for the user to ask**.
+
+## When to commit
+
+- There are staged or unstaged changes to tracked project files (source, config, docs).
+- The task is complete or a coherent slice of work is done (not mid-edit).
+
+Skip committing when:
+
+- There are no file changes.
+- Only incidental or generated artifacts changed (`node_modules/`, `dist/`) — these must stay gitignored.
+- Files likely contain secrets (`.env`, credentials).
+
+## How to commit
+
+1. Run `git status` and `git diff` to see what changed.
+2. Stage relevant files only (never secrets).
+3. Write a concise 1–2 sentence commit message focused on **why**.
+4. Commit on the current branch.
+
+## How to push
+
+1. After a successful commit, run `git push` (use `-u origin <branch>` if upstream is not set).
+2. If push fails (auth, no remote), report the error and what the user should do; do not force-push to `main`/`master`.
+
+## Git safety
+
+- Never update git config, skip hooks, or force-push unless the user explicitly requests it.
+- Do not amend unless the user asked or a hook auto-modified files after your commit.
+- On Windows, `gh` may require the full path: `"C:\Program Files\GitHub CLI\gh.exe"`.
+
+## User communication
+
+- Briefly note the commit hash/message and that the push succeeded (include the GitHub repo URL if known).
+- If you cannot push, still commit locally when appropriate and say push is pending.

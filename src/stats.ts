@@ -7,6 +7,7 @@ export interface PlayerStats {
   wins: number;
   winRate: number;
   totalShots: number;
+  practiceShots: number;
   totalPoints: number;
   avgScorePerShot: number;
   shotTypeCounts: Record<ShotType, number>;
@@ -32,8 +33,17 @@ export function computePlayerStats(data: AppData, playerId: string): PlayerStats
   if (!player) return null;
 
   const shots = getPlayerShots(data, playerId);
-  const gamesPlayed = data.games.filter((g) => g.playerIds.includes(playerId)).length;
-  const wins = data.games.filter((g) => g.winnerId === playerId).length;
+  const competitiveGames = data.games.filter(
+    (g) => g.mode === 'game' && g.endedAt !== null,
+  );
+  const gamesPlayed = competitiveGames.filter((g) =>
+    g.playerIds.includes(playerId),
+  ).length;
+  const wins = competitiveGames.filter((g) => g.winnerId === playerId).length;
+  const practiceShots = shots.filter((s) => {
+    const game = data.games.find((g) => g.id === s.gameId);
+    return game?.mode === 'practice';
+  }).length;
 
   const shotTypeCounts = initShotTypeCounts();
   const outcomeCounts = initOutcomeCounts();
@@ -69,6 +79,7 @@ export function computePlayerStats(data: AppData, playerId: string): PlayerStats
     wins,
     winRate: gamesPlayed > 0 ? (wins / gamesPlayed) * 100 : 0,
     totalShots: shots.length,
+    practiceShots,
     totalPoints,
     avgScorePerShot: shots.length > 0 ? totalPoints / shots.length : 0,
     shotTypeCounts,

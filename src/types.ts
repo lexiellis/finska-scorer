@@ -28,6 +28,8 @@ export type Outcome = (typeof OUTCOMES)[number];
 
 export type Tab = 'game' | 'stats' | 'players';
 
+export type GameMode = 'game' | 'practice';
+
 export interface Player {
   id: string;
   name: string;
@@ -40,13 +42,17 @@ export interface Shot {
   playerId: string;
   shotType: ShotType;
   distance: Distance;
+  /** Pins knocked (0–12). */
   score: number;
   outcome: Outcome;
   recordedAt: string;
+  scoreBefore: number;
+  scoreAfter: number;
 }
 
 export interface Game {
   id: string;
+  mode: GameMode;
   playerIds: string[];
   scores: Record<string, number>;
   winnerId: string | null;

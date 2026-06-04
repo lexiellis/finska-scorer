@@ -401,6 +401,124 @@
   padding-bottom: 2rem;
 }
 
+.rules-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  font-size: 0.9rem;
+}
+
+.rules-card h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+}
+
+.rules-card ul {
+  margin: 0;
+  padding-left: 1.2rem;
+  color: var(--text-muted);
+}
+
+.rules-card li {
+  margin-bottom: 0.35rem;
+}
+
+.rules-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  flex: 1;
+}
+
+.session-badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+
+.session-badge {
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+}
+
+.session-badge.game {
+  background: #e8f5e9;
+  color: var(--primary);
+}
+
+.session-badge.practice {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.start-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.start-section:last-child {
+  border-bottom: none;
+}
+
+.section-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.score-target {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.scoreboard-list li.at-target strong {
+  color: #1b4332;
+}
+
+.chip.near-win:not(.selected) {
+  border-color: #f9a825;
+}
+
+.flash-bust {
+  color: #e65100;
+}
+
+.flash-win {
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 1.05rem;
+  text-align: center;
+  margin: 0;
+}
+
+.practice-win-banner {
+  background: #e8f5e9;
+  border-radius: var(--radius);
+  padding: 1rem;
+  text-align: center;
+}
+
+.practice-win-banner p {
+  margin: 0 0 0.75rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.game-finished {
+  text-align: center;
+  padding: 1.5rem 0;
+}
+
 @media (min-width: 600px) {
   .score-grid {
     grid-template-columns: repeat(13, 1fr);

@@ -19,8 +19,11 @@ export default function App() {
     addPlayer,
     removePlayer,
     startGame,
+    startPractice,
     endGame,
+    endPractice,
     abandonGame,
+    resetPracticeRound,
     logShot,
     undoLastShot,
   } = useAppData();
@@ -37,8 +40,11 @@ export default function App() {
           <GamePanel
             data={data}
             onStartGame={(ids) => startGame(ids)}
+            onStartPractice={startPractice}
             onEndGame={endGame}
+            onEndPractice={endPractice}
             onAbandonGame={abandonGame}
+            onResetPracticeRound={resetPracticeRound}
             onLogShot={logShot}
             onUndo={undoLastShot}
           />

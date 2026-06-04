@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { applyFinskaScore } from '../scoring';
 import { createId, loadData, saveData } from '../storage';
 import type { AppData, Distance, Game, Outcome, Player, Shot, ShotType } from '../types';
 
@@ -37,8 +38,23 @@ export function useAppData() {
     const scores = Object.fromEntries(playerIds.map((id) => [id, 0]));
     const game: Game = {
       id: createId(),
+      mode: 'game',
       playerIds,
       scores,
+      winnerId: null,
+      startedAt: new Date().toISOString(),
+      endedAt: null,
+    };
+    update((prev) => ({ ...prev, games: [...prev.games, game] }));
+    return game;
+  }, [update]);
+
+  const startPractice = useCallback((playerId: string) => {
+    const game: Game = {
+      id: createId(),
+      mode: 'practice',
+      playerIds: [playerId],
+      scores: { [playerId]: 0 },
       winnerId: null,
       startedAt: new Date().toISOString(),
       endedAt: null,
@@ -58,11 +74,31 @@ export function useAppData() {
     }));
   }, [update]);
 
+  const endPractice = useCallback((gameId: string) => {
+    update((prev) => ({
+      ...prev,
+      games: prev.games.map((g) =>
+        g.id === gameId ? { ...g, endedAt: new Date().toISOString() } : g,
+      ),
+    }));
+  }, [update]);
+
   const abandonGame = useCallback((gameId: string) => {
     update((prev) => ({
       ...prev,
       games: prev.games.filter((g) => g.id !== gameId),
       shots: prev.shots.filter((s) => s.gameId !== gameId),
+    }));
+  }, [update]);
+
+  const resetPracticeRound = useCallback((gameId: string, playerId: string) => {
+    update((prev) => ({
+      ...prev,
+      games: prev.games.map((g) =>
+        g.id === gameId
+          ? { ...g, scores: { ...g.scores, [playerId]: 0 } }
+          : g,
+      ),
     }));
   }, [update]);
 
@@ -75,34 +111,58 @@ export function useAppData() {
       score: number;
       outcome: Outcome;
     }) => {
-      const shot: Shot = {
-        id: createId(),
-        gameId: params.gameId,
-        playerId: params.playerId,
-        shotType: params.shotType,
-        distance: params.distance,
-        score: params.score,
-        outcome: params.outcome,
-        recordedAt: new Date().toISOString(),
-      };
+      let resultShot: Shot | null = null;
+      let scoreEvent: ReturnType<typeof applyFinskaScore>['event'] = 'normal';
+
       update((prev) => {
         const game = prev.games.find((g) => g.id === params.gameId);
         if (!game || game.endedAt) return prev;
-        const newScore = (game.scores[params.playerId] ?? 0) + params.score;
+
+        const scoreBefore = game.scores[params.playerId] ?? 0;
+        const { newScore, event } = applyFinskaScore(scoreBefore, params.score);
+        scoreEvent = event;
+
+        const shot: Shot = {
+          id: createId(),
+          gameId: params.gameId,
+          playerId: params.playerId,
+          shotType: params.shotType,
+          distance: params.distance,
+          score: params.score,
+          outcome: params.outcome,
+          recordedAt: new Date().toISOString(),
+          scoreBefore,
+          scoreAfter: newScore,
+        };
+        resultShot = shot;
+
+        let games = prev.games.map((g) =>
+          g.id === params.gameId
+            ? {
+                ...g,
+                scores: { ...g.scores, [params.playerId]: newScore },
+                ...(g.mode === 'game' && event === 'win'
+                  ? {
+                      winnerId: params.playerId,
+                      endedAt: new Date().toISOString(),
+                    }
+                  : {}),
+              }
+            : g,
+        );
+
         return {
           ...prev,
           shots: [...prev.shots, shot],
-          games: prev.games.map((g) =>
-            g.id === params.gameId
-              ? {
-                  ...g,
-                  scores: { ...g.scores, [params.playerId]: newScore },
-                }
-              : g,
-          ),
+          games,
         };
       });
-      return shot;
+
+      const newScore =
+        resultShot && 'scoreAfter' in resultShot
+          ? (resultShot as Shot).scoreAfter
+          : null;
+      return { shot: resultShot, event: scoreEvent, newScore };
     },
     [update],
   );
@@ -114,9 +174,13 @@ export function useAppData() {
         .sort((a, b) => b.recordedAt.localeCompare(a.recordedAt));
       const last = gameShots[0];
       if (!last) return prev;
+
       const game = prev.games.find((g) => g.id === gameId);
       if (!game) return prev;
-      const newScore = Math.max(0, (game.scores[last.playerId] ?? 0) - last.score);
+
+      const restoreScore =
+        last.scoreBefore !== undefined ? last.scoreBefore : Math.max(0, (game.scores[last.playerId] ?? 0) - last.score);
+
       return {
         ...prev,
         shots: prev.shots.filter((s) => s.id !== last.id),
@@ -124,7 +188,9 @@ export function useAppData() {
           g.id === gameId
             ? {
                 ...g,
-                scores: { ...g.scores, [last.playerId]: newScore },
+                scores: { ...g.scores, [last.playerId]: restoreScore },
+                winnerId: null,
+                endedAt: null,
               }
             : g,
         ),
@@ -137,8 +203,11 @@ export function useAppData() {
     addPlayer,
     removePlayer,
     startGame,
+    startPractice,
     endGame,
+    endPractice,
     abandonGame,
+    resetPracticeRound,
     logShot,
     undoLastShot,
   };
