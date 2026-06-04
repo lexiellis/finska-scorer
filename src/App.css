@@ -111,24 +111,33 @@
 
 .log-header {
   flex-shrink: 0;
+  position: relative;
   display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
+  align-items: flex-start;
+  gap: 0.35rem;
+  padding-right: 2.75rem;
 }
 
-.scorecard-bar {
+.team-board {
+  flex: 1;
+  min-width: 0;
   display: flex;
-  flex-direction: row;
-  justify-content: flex-end;
-  flex-wrap: nowrap;
-  gap: 0.35rem;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  padding-bottom: 0.05rem;
+  flex-direction: row-reverse;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0.4rem 0.5rem;
+}
+
+.team-board-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+  max-width: 100%;
 }
 
 .scorecard-item {
-  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
@@ -176,18 +185,18 @@
   color: #e65100;
 }
 
-.log-header-bottom {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.player-strip {
-  flex: 1;
-  min-width: 0;
+.team-board-group .player-strip {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.3rem;
+  justify-content: flex-end;
+  gap: 0.25rem;
+}
+
+.log-header .btn-icon {
+  position: absolute;
+  top: 0;
+  right: 0;
+  margin-left: 0;
 }
 
 .player-pill {
@@ -302,14 +311,19 @@
 }
 
 .score-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  grid-template-rows: repeat(2, auto);
-  gap: clamp(0.25rem, 0.8vh, 0.35rem);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   align-content: center;
-  align-items: center;
+  gap: clamp(0.25rem, 0.8vh, 0.35rem);
   height: 100%;
   width: 100%;
+}
+
+.score-grid .score-btn {
+  flex: 1 1 calc(14.28% - 0.3rem);
+  min-width: 2.25rem;
+  max-width: 4.5rem;
 }
 
 .score-btn {
@@ -386,10 +400,9 @@
     font-size: 0.8rem;
   }
 
-  /* 5 + 5 + 3 across three rows on tablet */
-  .score-grid {
-    grid-template-columns: repeat(5, 1fr);
-    grid-template-rows: repeat(3, 1fr);
+  .score-grid .score-btn {
+    flex: 1 1 calc(20% - 0.35rem);
+    max-width: 5rem;
   }
 
   .tab-btn {

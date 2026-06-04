@@ -58,47 +58,44 @@ export function ShotLogForm({
       )}
 
       <header className="log-header">
-        <div className="scorecard-bar">
+        <div className="team-board">
           {[...teams].reverse().map((team) => {
             const pts = game.scores[team.id] ?? 0;
             const streak = missStreaks[team.id] ?? 0;
             return (
-              <div
-                key={team.id}
-                className={`scorecard-item ${pts === FINSKA_TARGET ? 'at-target' : ''} ${streak >= 2 ? 'miss-hot' : ''}`}
-              >
-                <span className="scorecard-name">{teamDisplayName(team, players)}</span>
-                <span className="scorecard-pts">
-                  {pts}<span className="scorecard-target">/{FINSKA_TARGET}</span>
-                  {streak > 0 && <span className="scorecard-miss"> · {streak}m</span>}
-                </span>
+              <div key={team.id} className="team-board-group">
+                <div
+                  className={`scorecard-item ${pts === FINSKA_TARGET ? 'at-target' : ''} ${streak >= 2 ? 'miss-hot' : ''}`}
+                >
+                  <span className="scorecard-name">{teamDisplayName(team, players)}</span>
+                  <span className="scorecard-pts">
+                    {pts}<span className="scorecard-target">/{FINSKA_TARGET}</span>
+                    {streak > 0 && <span className="scorecard-miss"> · {streak}m</span>}
+                  </span>
+                </div>
+                <div className="player-strip">
+                  {team.playerIds.map((id) => {
+                    const p = players.find((pl) => pl.id === id);
+                    if (!p) return null;
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        className={`player-pill ${activePlayerId === id ? 'selected' : ''}`}
+                        onClick={() => onSelectPlayer(id)}
+                      >
+                        {p.name}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             );
           })}
         </div>
-        <div className="log-header-bottom">
-          <div className="player-strip">
-            {teams.flatMap((team) =>
-              team.playerIds.map((id) => {
-                const p = players.find((pl) => pl.id === id);
-                if (!p) return null;
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    className={`player-pill ${activePlayerId === id ? 'selected' : ''}`}
-                    onClick={() => onSelectPlayer(id)}
-                  >
-                    {p.name}
-                  </button>
-                );
-              }),
-            )}
-          </div>
-          <button type="button" className="btn-icon" onClick={onEnd} aria-label="End session">
-            ⋯
-          </button>
-        </div>
+        <button type="button" className="btn-icon" onClick={onEnd} aria-label="End session">
+          ⋯
+        </button>
       </header>
 
       <div className="log-fields">
