@@ -9,21 +9,23 @@
 
 .app-header {
   flex-shrink: 0;
-  padding: 1rem 1.25rem 0.5rem;
+  padding: 0.5rem 0.75rem;
   background: linear-gradient(135deg, #1b4332 0%, #2d6a4f 100%);
   color: #fff;
 }
 
 .app-header h1 {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 1.1rem;
   font-weight: 700;
 }
 
-.app-header p {
-  margin: 0.2rem 0 0;
-  opacity: 0.85;
-  font-size: 0.9rem;
+.app--logging .app-header {
+  padding: 0.3rem 0.6rem;
+}
+
+.app--logging .app-header h1 {
+  font-size: 0.95rem;
 }
 
 .app-main {
@@ -38,23 +40,27 @@
   display: flex;
   border-top: 1px solid var(--border);
   background: var(--surface);
-  padding: 0.35rem 0.5rem calc(0.35rem + env(safe-area-inset-bottom));
-  gap: 0.25rem;
+  padding: 0.25rem 0.4rem calc(0.25rem + env(safe-area-inset-bottom));
+  gap: 0.2rem;
 }
 
 .tab-btn {
   flex: 1;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 0.15rem;
-  padding: 0.5rem;
-  min-height: var(--touch);
+  justify-content: center;
+  padding: 0.45rem;
+  min-height: 40px;
   border-radius: 10px;
   color: var(--text-muted);
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: 0.8rem;
+  font-weight: 700;
   transition: background 0.15s, color 0.15s;
+}
+
+.app--logging .tab-btn {
+  min-height: 36px;
+  font-size: 0.75rem;
 }
 
 .tab-btn.active {
@@ -62,8 +68,294 @@
   color: var(--primary);
 }
 
-.tab-icon {
+.app-main--log {
+  padding: 0.2rem 0.35rem 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.shot-log {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+}
+
+.shot-toast {
+  position: absolute;
+  left: 0.35rem;
+  right: 0.35rem;
+  top: 0.2rem;
+  z-index: 5;
+  margin: 0;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: center;
+  background: var(--surface);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.score-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.score-pill {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  padding: 0.2rem 0.45rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.75rem;
+}
+
+.score-pill-name {
+  font-weight: 700;
+  max-width: 4.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.score-pill-pts {
+  font-weight: 800;
+  color: var(--primary);
+}
+
+.score-pill-miss {
+  font-style: normal;
+  font-size: 0.65rem;
+  color: #e65100;
+  font-weight: 700;
+}
+
+.score-pill.miss-hot {
+  border-color: #e65100;
+}
+
+.player-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  flex-shrink: 0;
+}
+
+.player-pill {
+  padding: 0.25rem 0.55rem;
+  min-height: 32px;
+  border-radius: 999px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  font-size: 0.8rem;
+  font-weight: 700;
+  touch-action: manipulation;
+}
+
+.player-pill.selected {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+}
+
+.log-block {
+  display: grid;
+  grid-template-columns: 1.6rem 1fr;
+  gap: 0.15rem 0.3rem;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.log-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  text-align: right;
+  line-height: 1;
+}
+
+.btn-grid {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.btn-grid.cols-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.btn-grid.cols-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.btn-grid.cols-6 {
+  grid-template-columns: repeat(6, 1fr);
+}
+
+.pick-btn {
+  min-height: 32px;
+  padding: 0.1rem 0.05rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  border-radius: 7px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  touch-action: manipulation;
+}
+
+.pick-btn.selected {
+  border-color: var(--primary);
+  background: #e8f5e9;
+  color: var(--primary);
+}
+
+.score-row {
+  display: grid;
+  grid-template-columns: repeat(13, 1fr);
+  gap: 0.12rem;
+}
+
+.score-btn {
+  aspect-ratio: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  font-size: 0.62rem;
+  font-weight: 800;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  touch-action: manipulation;
+}
+
+.score-btn.selected {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+}
+
+.log-footer {
+  margin-top: auto;
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.3rem;
+  padding-top: 0.15rem;
+}
+
+.log-btn {
+  min-height: 42px;
+  font-size: 0.95rem;
+}
+
+.btn-icon {
+  margin-left: auto;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 1.1rem;
+  line-height: 1;
+  touch-action: manipulation;
+}
+
+.menu-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.menu-sheet {
+  width: 100%;
+  max-width: 900px;
+  background: var(--surface);
+  border-radius: 14px 14px 0 0;
+  padding: 0.5rem 0.5rem calc(0.5rem + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.menu-title {
+  margin: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.menu-item {
+  min-height: 44px;
+  padding: 0 1rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.95rem;
+  border-radius: 10px;
+  background: var(--bg);
+  touch-action: manipulation;
+}
+
+.menu-item.danger {
+  color: var(--danger);
+}
+
+.menu-item.ghost {
+  background: transparent;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.practice-overlay {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  text-align: center;
+}
+
+.practice-overlay p {
+  margin: 0;
   font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--primary);
+}
+
+.practice-overlay-actions {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 280px;
+}
+
+.practice-overlay-actions .btn {
+  flex: 1;
+}
+
+.panel-done {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem 1rem;
 }
 
 .panel {

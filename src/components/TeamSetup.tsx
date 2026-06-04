@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { createId } from '../storage';
 import type { Player, Team } from '../types';
 
-export interface TeamDraft {
+interface TeamDraft {
   id: string;
   name: string;
   playerIds: string[];
@@ -24,7 +24,6 @@ export function TeamSetup({ players, onStart }: TeamSetupProps) {
   const [teams, setTeams] = useState<TeamDraft[]>(defaultTeams);
 
   const assignedIds = new Set(teams.flatMap((t) => t.playerIds));
-  const unassigned = players.filter((p) => !assignedIds.has(p.id));
 
   const updateTeam = (id: string, patch: Partial<TeamDraft>) => {
     setTeams((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
@@ -67,14 +66,11 @@ export function TeamSetup({ players, onStart }: TeamSetupProps) {
   return (
     <section className="team-setup">
       <div className="team-setup-header">
-        <h3 className="field-label">Teams</h3>
+        <h3 className="field-label">Game</h3>
         <button type="button" className="btn ghost" onClick={addTeam}>
-          + Add team
+          + Team
         </button>
       </div>
-      <p className="section-hint">
-        Assign each player to one team. Three team misses in a row eliminates that team.
-      </p>
 
       {teams.map((team) => (
         <div key={team.id} className="team-card">
@@ -92,7 +88,7 @@ export function TeamSetup({ players, onStart }: TeamSetupProps) {
                 className="btn ghost danger"
                 onClick={() => removeTeam(team.id)}
               >
-                Remove
+                ×
               </button>
             )}
           </div>
@@ -113,17 +109,8 @@ export function TeamSetup({ players, onStart }: TeamSetupProps) {
               );
             })}
           </div>
-          {team.playerIds.length === 0 && (
-            <p className="team-warning">Add at least one player to this team.</p>
-          )}
         </div>
       ))}
-
-      {unassigned.length > 0 && (
-        <p className="section-hint unassigned-hint">
-          Unassigned: {unassigned.map((p) => p.name).join(', ')}
-        </p>
-      )}
 
       <button
         type="button"
@@ -133,13 +120,13 @@ export function TeamSetup({ players, onStart }: TeamSetupProps) {
           onStart(
             teams.map((t) => ({
               id: t.id,
-              name: t.name.trim() || `Team`,
+              name: t.name.trim() || 'Team',
               playerIds: t.playerIds,
             })),
           )
         }
       >
-        Start game
+        Start
       </button>
     </section>
   );

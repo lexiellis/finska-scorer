@@ -78,9 +78,6 @@ export function StatsPanel({ data }: StatsPanelProps) {
     <div className="panel stats-panel">
       <header className="panel-header">
         <h2>Stats</h2>
-        <p className="panel-subtitle">
-          Win rate from competitive games only. Practice shots count in shot stats.
-        </p>
       </header>
 
       <div className="player-chips">

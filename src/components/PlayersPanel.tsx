@@ -21,7 +21,6 @@ export function PlayersPanel({ players, onAdd, onRemove }: PlayersPanelProps) {
     <div className="panel">
       <header className="panel-header">
         <h2>Players</h2>
-        <p className="panel-subtitle">Add everyone you track stats for.</p>
       </header>
 
       <form
