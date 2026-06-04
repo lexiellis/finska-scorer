@@ -57,55 +57,52 @@ export function ShotLogForm({
         </p>
       )}
 
-      <header className="log-top">
-        <div className="score-strip">
-          {teams.map((team) => {
+      <header className="log-header">
+        <div className="scorecard-bar">
+          {[...teams].reverse().map((team) => {
             const pts = game.scores[team.id] ?? 0;
             const streak = missStreaks[team.id] ?? 0;
             return (
               <div
                 key={team.id}
-                className={`score-pill ${pts === FINSKA_TARGET ? 'at-target' : ''} ${streak >= 2 ? 'miss-hot' : ''}`}
+                className={`scorecard-item ${pts === FINSKA_TARGET ? 'at-target' : ''} ${streak >= 2 ? 'miss-hot' : ''}`}
               >
-                <span className="score-pill-name">{teamDisplayName(team, players)}</span>
-                <span className="score-pill-pts">
-                  {pts}
-                  <span className="score-pill-target">/{FINSKA_TARGET}</span>
-                  {streak > 0 && (
-                    <span className="score-pill-miss">{streak}×miss</span>
-                  )}
+                <span className="scorecard-name">{teamDisplayName(team, players)}</span>
+                <span className="scorecard-pts">
+                  {pts}<span className="scorecard-target">/{FINSKA_TARGET}</span>
+                  {streak > 0 && <span className="scorecard-miss"> · {streak}m</span>}
                 </span>
               </div>
             );
           })}
         </div>
-        <button type="button" className="btn-icon" onClick={onEnd} aria-label="End session">
-          ⋯
-        </button>
+        <div className="log-header-bottom">
+          <div className="player-strip">
+            {teams.flatMap((team) =>
+              team.playerIds.map((id) => {
+                const p = players.find((pl) => pl.id === id);
+                if (!p) return null;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    className={`player-pill ${activePlayerId === id ? 'selected' : ''}`}
+                    onClick={() => onSelectPlayer(id)}
+                  >
+                    {p.name}
+                  </button>
+                );
+              }),
+            )}
+          </div>
+          <button type="button" className="btn-icon" onClick={onEnd} aria-label="End session">
+            ⋯
+          </button>
+        </div>
       </header>
-
-      <div className="player-strip">
-        {teams.flatMap((team) =>
-          team.playerIds.map((id) => {
-            const p = players.find((pl) => pl.id === id);
-            if (!p) return null;
-            return (
-              <button
-                key={id}
-                type="button"
-                className={`player-pill ${activePlayerId === id ? 'selected' : ''}`}
-                onClick={() => onSelectPlayer(id)}
-              >
-                {p.name}
-              </button>
-            );
-          }),
-        )}
-      </div>
 
       <div className="log-fields">
         <section className="log-section log-section--type">
-          <h3 className="log-section-title">Shot type</h3>
           <div className="btn-grid cols-4">
             {SHOT_TYPES.map((t) => (
               <button
@@ -121,7 +118,6 @@ export function ShotLogForm({
         </section>
 
         <section className="log-section log-section--distance">
-          <h3 className="log-section-title">Distance</h3>
           <div className="btn-grid cols-4 btn-grid--distance">
             {DISTANCES.map((d) => (
               <button
@@ -137,7 +133,6 @@ export function ShotLogForm({
         </section>
 
         <section className="log-section log-section--score">
-          <h3 className="log-section-title">Score</h3>
           <div className="score-grid">
             {Array.from({ length: 13 }, (_, i) => (
               <button
@@ -154,7 +149,6 @@ export function ShotLogForm({
         </section>
 
         <section className="log-section log-section--outcome">
-          <h3 className="log-section-title">Outcome</h3>
           <div className="btn-grid cols-2">
             {OUTCOMES.map((o) => (
               <button
