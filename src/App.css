@@ -111,33 +111,21 @@
 
 .log-header {
   flex-shrink: 0;
-  position: relative;
-  display: flex;
-  align-items: flex-start;
-  gap: 0.35rem;
-  padding-right: 2.75rem;
-}
-
-.team-board {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: row-reverse;
-  flex-wrap: wrap;
-  justify-content: flex-start;
-  align-items: flex-start;
-  gap: 0.4rem 0.5rem;
-}
-
-.team-board-group {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: 0.25rem;
-  max-width: 100%;
+  gap: 0.3rem;
+}
+
+.scorecard-bar {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.35rem;
 }
 
 .scorecard-item {
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
@@ -185,18 +173,18 @@
   color: #e65100;
 }
 
-.team-board-group .player-strip {
+.log-header-bottom {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.25rem;
+  align-items: center;
+  gap: 0.35rem;
 }
 
-.log-header .btn-icon {
-  position: absolute;
-  top: 0;
-  right: 0;
-  margin-left: 0;
+.player-strip {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
 }
 
 .player-pill {
@@ -315,15 +303,16 @@
   flex-wrap: wrap;
   justify-content: center;
   align-content: center;
-  gap: clamp(0.25rem, 0.8vh, 0.35rem);
+  gap: clamp(0.3rem, 0.9vh, 0.4rem);
   height: 100%;
   width: 100%;
+  padding: 0.1rem 0;
 }
 
 .score-grid .score-btn {
-  flex: 1 1 calc(14.28% - 0.3rem);
-  min-width: 2.25rem;
-  max-width: 4.5rem;
+  flex: 0 1 calc(14.28% - 0.35rem);
+  min-width: 2.5rem;
+  max-width: 3.75rem;
 }
 
 .score-btn {
@@ -401,8 +390,9 @@
   }
 
   .score-grid .score-btn {
-    flex: 1 1 calc(20% - 0.35rem);
-    max-width: 5rem;
+    flex: 0 1 calc(20% - 0.4rem);
+    min-width: 2.75rem;
+    max-width: 4.25rem;
   }
 
   .tab-btn {
