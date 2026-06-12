@@ -1,14 +1,14 @@
-import { FINSKA_TARGET } from '../scoring';
-import { CONSECUTIVE_MISS_LIMIT, teamDisplayName } from '../teams';
-import type { AppData, Distance, Game, Outcome, ShotType } from '../types';
+import { useRef, useState } from 'react';
+import type { AppData, Distance, Game, Outcome, Shot, ShotType } from '../types';
 import { DISTANCES, OUTCOMES, SHOT_TYPES } from '../types';
+import { OUTCOME_BUTTON_LABELS } from '../outcomeDisplay';
+import { ScoreBoard } from './ScoreBoard';
 
 interface ShotLogFormProps {
   game: Game;
   players: AppData['players'];
+  shots: Shot[];
   activePlayerId: string | null;
-  onSelectPlayer: (id: string) => void;
-  missStreaks: Record<string, number>;
   shotType: ShotType | null;
   distance: Distance | null;
   score: number | null;
@@ -19,17 +19,43 @@ interface ShotLogFormProps {
   onOutcome: (v: Outcome) => void;
   onLog: () => void;
   onUndo: () => void;
+  onUpdateShot: (
+    shotId: string,
+    patch: { shotType: ShotType; distance: Distance; score: number; outcome: Outcome },
+  ) => void;
   onEnd: () => void;
   flash: string;
   flashKind: 'info' | 'bust' | 'win' | 'danger';
 }
 
+const OUTCOME_LABELS = OUTCOME_BUTTON_LABELS;
+
+function ScoresIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="20"
+      height="20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <line x1="3" y1="9" x2="21" y2="9" />
+      <line x1="3" y1="15" x2="21" y2="15" />
+      <line x1="9" y1="3" x2="9" y2="21" />
+    </svg>
+  );
+}
+
 export function ShotLogForm({
   game,
   players,
+  shots,
   activePlayerId,
-  onSelectPlayer,
-  missStreaks,
   shotType,
   distance,
   score,
@@ -40,14 +66,31 @@ export function ShotLogForm({
   onOutcome,
   onLog,
   onUndo,
+  onUpdateShot,
   onEnd,
   flash,
   flashKind,
 }: ShotLogFormProps) {
-  const teams =
-    game.mode === 'practice'
-      ? game.teams
-      : game.teams.filter((t) => !game.eliminatedTeamIds.includes(t.id));
+  const [showHistory, setShowHistory] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
+  const [scoreTravel, setScoreTravel] = useState(120);
+
+  const openHistory = () => {
+    const header = headerRef.current;
+    if (header) {
+      const totalEl = header.querySelector<HTMLElement>('.score-bubble-total');
+      const headerRect = header.getBoundingClientRect();
+      const viewportMid = window.innerHeight * 0.72;
+      const fromY = totalEl?.getBoundingClientRect().top ?? headerRect.bottom;
+      setScoreTravel(Math.max(80, viewportMid - fromY));
+    }
+    setShowHistory(true);
+  };
+
+  const toggleHistory = () => {
+    if (showHistory) setShowHistory(false);
+    else openHistory();
+  };
 
   return (
     <div className="shot-log">
@@ -57,52 +100,32 @@ export function ShotLogForm({
         </p>
       )}
 
-      <header className="log-header">
-        <div className="scorecard-bar">
-          {[...teams].reverse().map((team) => {
-            const pts = game.scores[team.id] ?? 0;
-            const streak = missStreaks[team.id] ?? 0;
-            return (
-              <div
-                key={team.id}
-                className={`scorecard-item ${pts === FINSKA_TARGET ? 'at-target' : ''} ${streak >= 2 ? 'miss-hot' : ''}`}
-              >
-                <span className="scorecard-name">{teamDisplayName(team, players)}</span>
-                <span className="scorecard-pts">
-                  {pts}<span className="scorecard-target">/{FINSKA_TARGET}</span>
-                  {streak > 0 && <span className="scorecard-miss"> · {streak}m</span>}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-        <div className="log-header-bottom">
-          <div className="player-strip">
-            {teams.flatMap((team) =>
-              team.playerIds.map((id) => {
-                const p = players.find((pl) => pl.id === id);
-                if (!p) return null;
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    className={`player-pill ${activePlayerId === id ? 'selected' : ''}`}
-                    onClick={() => onSelectPlayer(id)}
-                  >
-                    {p.name}
-                  </button>
-                );
-              }),
-            )}
-          </div>
-          <button type="button" className="btn-icon" onClick={onEnd} aria-label="End session">
-            ⋯
-          </button>
-        </div>
-      </header>
+      {!showHistory && (
+        <header className="log-header" ref={headerRef}>
+          <ScoreBoard
+            game={game}
+            players={players}
+            shots={shots}
+            activePlayerId={activePlayerId}
+            mode="compact"
+          />
+        </header>
+      )}
 
+      {showHistory ? (
+        <ScoreBoard
+          game={game}
+          players={players}
+          shots={shots}
+          activePlayerId={activePlayerId}
+          mode="expanded"
+          scoreTravel={scoreTravel}
+          onUpdateShot={onUpdateShot}
+        />
+      ) : (
       <div className="log-fields">
         <section className="log-section log-section--type">
+          <h3 className="log-section-title">Shot type</h3>
           <div className="btn-grid cols-4">
             {SHOT_TYPES.map((t) => (
               <button
@@ -118,6 +141,7 @@ export function ShotLogForm({
         </section>
 
         <section className="log-section log-section--distance">
+          <h3 className="log-section-title">Distance</h3>
           <div className="btn-grid cols-4 btn-grid--distance">
             {DISTANCES.map((d) => (
               <button
@@ -126,13 +150,14 @@ export function ShotLogForm({
                 className={`pick-btn pick-btn--compact ${distance === d ? 'selected' : ''}`}
                 onClick={() => onDistance(d)}
               >
-                {d === '12+' ? '12+' : `${d}m`}
+                {typeof d === 'string' ? d : `${d}m`}
               </button>
             ))}
           </div>
         </section>
 
         <section className="log-section log-section--score">
+          <h3 className="log-section-title">Pins knocked</h3>
           <div className="score-grid">
             {Array.from({ length: 13 }, (_, i) => (
               <button
@@ -149,53 +174,66 @@ export function ShotLogForm({
         </section>
 
         <section className="log-section log-section--outcome">
-          <div className="btn-grid cols-2">
+          <h3 className="log-section-title">Outcome</h3>
+          <div className="btn-grid cols-3">
             {OUTCOMES.map((o) => (
               <button
                 key={o}
                 type="button"
-                className={`pick-btn pick-btn--wrap ${outcome === o ? 'selected' : ''}`}
+                className={`pick-btn pick-btn--outcome ${outcome === o ? 'selected' : ''}`}
                 onClick={() => onOutcome(o)}
               >
-                {o}
+                {OUTCOME_LABELS[o]}
               </button>
             ))}
           </div>
         </section>
       </div>
+      )}
 
       <footer className="log-footer">
-        <button type="button" className="btn primary log-btn" onClick={onLog}>
-          Log shot
-        </button>
-        <button type="button" className="btn secondary log-btn" onClick={onUndo}>
-          Undo
-        </button>
+        {showHistory ? (
+          <button
+            type="button"
+            className="btn primary log-btn"
+            onClick={() => setShowHistory(false)}
+          >
+            Back
+          </button>
+        ) : (
+          <button type="button" className="btn primary log-btn" onClick={onLog}>
+            Log shot
+          </button>
+        )}
+        <div className="log-footer-actions">
+          <button
+            type="button"
+            className="btn-icon log-footer-icon"
+            onClick={() => {
+              if (confirm('Undo last shot?')) onUndo();
+            }}
+            aria-label="Undo last shot"
+          >
+            ↩
+          </button>
+          <button
+            type="button"
+            className={`btn-icon log-footer-icon ${showHistory ? 'active' : ''}`}
+            onClick={toggleHistory}
+            aria-label={showHistory ? 'Back to shot log' : 'View and edit scores'}
+          >
+            <ScoresIcon />
+          </button>
+          <button
+            type="button"
+            className="btn-icon log-footer-icon"
+            onClick={onEnd}
+            aria-label="End session"
+          >
+            ⋯
+          </button>
+        </div>
       </footer>
-    </div>
-  );
-}
-
-export function PracticeOverlay({
-  kind,
-  onPrimary,
-  onSecondary,
-}: {
-  kind: 'win' | 'miss';
-  onPrimary: () => void;
-  onSecondary: () => void;
-}) {
-  return (
-    <div className="practice-overlay">
-      <p>{kind === 'win' ? `Hit ${FINSKA_TARGET}` : `${CONSECUTIVE_MISS_LIMIT} misses`}</p>
-      <div className="practice-overlay-actions">
-        <button type="button" className="btn primary" onClick={onPrimary}>
-          Again
-        </button>
-        <button type="button" className="btn secondary" onClick={onSecondary}>
-          Done
-        </button>
-      </div>
     </div>
   );
 }

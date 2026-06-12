@@ -3,13 +3,15 @@ import { scoreEventMessage } from '../scoring';
 import { getActiveGame } from '../stats';
 import {
   CONSECUTIVE_MISS_LIMIT,
+  getActivePlayerIds,
   getActiveTeams,
-  getGamePlayerIds,
-  recomputeGameState,
+  getFirstThrowPlayer,
+  getGameShots,
+  getNextThrowPlayer,
   teamDisplayName,
 } from '../teams';
 import type { AppData, Distance, Game, Outcome, ShotType, Team } from '../types';
-import { PracticeOverlay, ShotLogForm } from './ShotLogForm';
+import { ShotLogForm } from './ShotLogForm';
 import { TeamSetup } from './TeamSetup';
 
 interface LogShotResult {
@@ -22,11 +24,8 @@ interface LogShotResult {
 interface GamePanelProps {
   data: AppData;
   onStartGame: (teams: Team[]) => void;
-  onStartPractice: (playerId: string) => void;
   onEndGame: (gameId: string, winnerTeamId: string) => void;
-  onEndPractice: (gameId: string) => void;
   onAbandonGame: (gameId: string) => void;
-  onResetPracticeRound: (gameId: string) => void;
   onLogShot: (params: {
     gameId: string;
     playerId: string;
@@ -36,21 +35,22 @@ interface GamePanelProps {
     outcome: Outcome;
   }) => LogShotResult;
   onUndo: (gameId: string) => void;
+  onUpdateShot: (
+    shotId: string,
+    patch: { shotType: ShotType; distance: Distance; score: number; outcome: Outcome },
+  ) => void;
 }
 
 export function GamePanel({
   data,
   onStartGame,
-  onStartPractice,
   onEndGame,
-  onEndPractice,
   onAbandonGame,
-  onResetPracticeRound,
   onLogShot,
   onUndo,
+  onUpdateShot,
 }: GamePanelProps) {
   const activeGame = getActiveGame(data);
-  const [practicePlayerId, setPracticePlayerId] = useState<string | null>(null);
   const [activePlayerId, setActivePlayerId] = useState<string | null>(null);
   const [shotType, setShotType] = useState<ShotType | null>(null);
   const [distance, setDistance] = useState<Distance | null>(null);
@@ -58,8 +58,6 @@ export function GamePanel({
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [flash, setFlash] = useState('');
   const [flashKind, setFlashKind] = useState<'info' | 'bust' | 'win' | 'danger'>('info');
-  const [practiceHit50, setPracticeHit50] = useState(false);
-  const [practiceMissOut, setPracticeMissOut] = useState(false);
   const [completedGameId, setCompletedGameId] = useState<string | null>(null);
   const [showEndMenu, setShowEndMenu] = useState(false);
 
@@ -69,17 +67,21 @@ export function GamePanel({
 
   useEffect(() => {
     if (activeGame) {
-      const ids = getGamePlayerIds(activeGame);
-      if (!activePlayerId || !ids.includes(activePlayerId)) {
-        setActivePlayerId(ids[0] ?? null);
+      const activeIds = getActivePlayerIds(activeGame);
+      if (!activePlayerId || !activeIds.includes(activePlayerId)) {
+        const gameShots = getGameShots(activeGame, data.shots);
+        const lastShot = gameShots[gameShots.length - 1];
+        setActivePlayerId(
+          lastShot
+            ? getNextThrowPlayer(activeGame, data.shots, lastShot.playerId)
+            : getFirstThrowPlayer(activeGame),
+        );
       }
     }
     if (!activeGame && !completedGameId) {
-      setPracticeHit50(false);
-      setPracticeMissOut(false);
       setShowEndMenu(false);
     }
-  }, [activeGame, activePlayerId, completedGameId]);
+  }, [activeGame, activePlayerId, completedGameId, data.shots]);
 
   const resetShotForm = () => {
     setShotType(null);
@@ -125,7 +127,7 @@ export function GamePanel({
     });
 
     let message = scoreEventMessage(event, teamLabel, score);
-    if (event === 'normal' && outcome === 'Miss') {
+    if (event === 'normal' && score === 0) {
       message = `${teamLabel} miss ${missStreak}/${CONSECUTIVE_MISS_LIMIT}`;
     } else if (event === 'normal' && newScore !== null && score > 0) {
       message = `${teamLabel} → ${newScore}`;
@@ -142,14 +144,20 @@ export function GamePanel({
     showFlash(message, kind);
     resetShotForm();
 
-    if (activeGame.mode === 'game' && (event === 'win' || event === 'miss_loss')) {
+    if (event === 'win' || event === 'miss_loss') {
       setCompletedGameId(activeGame.id);
+    } else {
+      setActivePlayerId(getNextThrowPlayer(activeGame, data.shots, activePlayerId));
     }
-    if (activeGame.mode === 'practice' && event === 'win') {
-      setPracticeHit50(true);
-    }
-    if (activeGame.mode === 'practice' && event === 'miss_loss') {
-      setPracticeMissOut(true);
+  };
+
+  const handleUndo = () => {
+    if (!activeGame) return;
+    const gameShots = getGameShots(activeGame, data.shots);
+    const lastShot = gameShots[gameShots.length - 1];
+    onUndo(activeGame.id);
+    if (lastShot) {
+      setActivePlayerId(lastShot.playerId);
     }
   };
 
@@ -192,79 +200,24 @@ export function GamePanel({
       <div className="panel">
         {data.players.length === 0 ? (
           <p className="empty-state">Add players first.</p>
+        ) : data.players.length < 2 ? (
+          <p className="empty-state">Need 2+ players for a game.</p>
         ) : (
-          <>
-            <section className="start-section">
-              <h3 className="field-label">Practice</h3>
-              <div className="player-chips">
-                {data.players.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    className={`chip ${practicePlayerId === p.id ? 'selected' : ''}`}
-                    onClick={() => setPracticePlayerId(p.id)}
-                  >
-                    {p.name}
-                  </button>
-                ))}
-              </div>
-              <button
-                type="button"
-                className="btn secondary"
-                disabled={!practicePlayerId}
-                onClick={() => {
-                  if (!practicePlayerId) return;
-                  onStartPractice(practicePlayerId);
-                  setActivePlayerId(practicePlayerId);
-                  setPracticePlayerId(null);
-                }}
-              >
-                Start
-              </button>
-            </section>
-
-            <section className="start-section">
-              {data.players.length < 2 ? (
-                <p className="empty-state">Need 2+ players for a game.</p>
-              ) : (
-                <TeamSetup players={data.players} onStart={onStartGame} />
-              )}
-            </section>
-          </>
+          <TeamSetup players={data.players} onStart={onStartGame} />
         )}
       </div>
     );
   }
 
   const liveShots = data.shots.filter((s) => s.gameId === activeGame.id);
-  const liveState = recomputeGameState(activeGame, liveShots);
-
-  if (practiceHit50 || practiceMissOut) {
-    return (
-      <PracticeOverlay
-        kind={practiceHit50 ? 'win' : 'miss'}
-        onPrimary={() => {
-          onResetPracticeRound(activeGame.id);
-          setPracticeHit50(false);
-          setPracticeMissOut(false);
-        }}
-        onSecondary={() => {
-          onEndPractice(activeGame.id);
-          setPracticeHit50(false);
-          setPracticeMissOut(false);
-        }}
-      />
-    );
-  }
 
   return (
     <>
       <ShotLogForm
         game={activeGame}
         players={data.players}
+        shots={liveShots}
         activePlayerId={activePlayerId}
-        onSelectPlayer={setActivePlayerId}
-        missStreaks={liveState.missStreaks}
         shotType={shotType}
         distance={distance}
         score={score}
@@ -274,7 +227,8 @@ export function GamePanel({
         onScore={setScore}
         onOutcome={setOutcome}
         onLog={handleLogShot}
-        onUndo={() => onUndo(activeGame.id)}
+        onUndo={handleUndo}
+        onUpdateShot={onUpdateShot}
         onEnd={() => setShowEndMenu(true)}
         flash={flash}
         flashKind={flashKind}
@@ -286,7 +240,6 @@ export function GamePanel({
           players={data.players}
           onClose={() => setShowEndMenu(false)}
           onEndGame={onEndGame}
-          onEndPractice={onEndPractice}
           onAbandon={onAbandonGame}
         />
       )}
@@ -299,14 +252,12 @@ function EndMenu({
   players,
   onClose,
   onEndGame,
-  onEndPractice,
   onAbandon,
 }: {
   game: Game;
   players: AppData['players'];
   onClose: () => void;
   onEndGame: (gameId: string, winnerTeamId: string) => void;
-  onEndPractice: (gameId: string) => void;
   onAbandon: (gameId: string) => void;
 }) {
   const [pickWinner, setPickWinner] = useState(false);
@@ -314,22 +265,7 @@ function EndMenu({
   return (
     <div className="menu-backdrop" onClick={onClose}>
       <div className="menu-sheet" onClick={(e) => e.stopPropagation()}>
-        {game.mode === 'practice' ? (
-          <>
-            <button type="button" className="menu-item" onClick={() => onEndPractice(game.id)}>
-              End practice
-            </button>
-            <button
-              type="button"
-              className="menu-item danger"
-              onClick={() => {
-                if (confirm('Discard session?')) onAbandon(game.id);
-              }}
-            >
-              Discard
-            </button>
-          </>
-        ) : pickWinner ? (
+        {pickWinner ? (
           <>
             <p className="menu-title">Winner</p>
             {getActiveTeams(game).map((team) => (

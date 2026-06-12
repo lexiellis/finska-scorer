@@ -20,13 +20,11 @@ export default function App() {
     addPlayer,
     removePlayer,
     startGame,
-    startPractice,
     endGame,
-    endPractice,
     abandonGame,
-    resetPracticeRound,
     logShot,
     undoLastShot,
+    updateShot,
   } = useAppData();
 
   const loggingActive = tab === 'game' && getActiveGame(data) !== null;
@@ -34,7 +32,14 @@ export default function App() {
   return (
     <div className={`app ${loggingActive ? 'app--logging' : ''}`}>
       <header className="app-header">
-        <h1>Finska</h1>
+        {loggingActive ? (
+          <h1>Finska</h1>
+        ) : (
+          <>
+            <h1>Finska Scorer</h1>
+            <p>Log every throw. Track the stats.</p>
+          </>
+        )}
       </header>
 
       <main className={`app-main ${loggingActive ? 'app-main--log' : ''}`}>
@@ -42,13 +47,11 @@ export default function App() {
           <GamePanel
             data={data}
             onStartGame={(ids) => startGame(ids)}
-            onStartPractice={startPractice}
             onEndGame={endGame}
-            onEndPractice={endPractice}
             onAbandonGame={abandonGame}
-            onResetPracticeRound={(gameId) => resetPracticeRound(gameId)}
             onLogShot={logShot}
             onUndo={undoLastShot}
+            onUpdateShot={updateShot}
           />
         )}
         {tab === 'stats' && <StatsPanel data={data} />}

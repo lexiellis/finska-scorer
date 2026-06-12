@@ -125,12 +125,6 @@ export function StatsPanel({ data }: StatsPanelProps) {
               <span className="stat-value">{stats.totalShots}</span>
               <span className="stat-label">Shots logged</span>
             </div>
-            {stats.practiceShots > 0 && (
-              <div className="stat-card">
-                <span className="stat-value">{stats.practiceShots}</span>
-                <span className="stat-label">Practice shots</span>
-              </div>
-            )}
             <div className="stat-card">
               <span className="stat-value">{stats.avgScorePerShot.toFixed(1)}</span>
               <span className="stat-label">Avg pts/shot</span>

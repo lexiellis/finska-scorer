@@ -3,8 +3,8 @@ import type { Game, Outcome, Shot, Team } from './types';
 
 export const CONSECUTIVE_MISS_LIMIT = 3;
 
-export function isMissOutcome(outcome: Outcome): boolean {
-  return outcome === 'Miss';
+export function isMissOutcome(_outcome: Outcome, score: number): boolean {
+  return score === 0;
 }
 
 export function getGamePlayerIds(game: Game): string[] {
@@ -19,8 +19,49 @@ export function getActiveTeams(game: Game): Team[] {
   return game.teams.filter((t) => !game.eliminatedTeamIds.includes(t.id));
 }
 
+export function getActivePlayerIds(game: Game): string[] {
+  return getActiveTeams(game).flatMap((t) => t.playerIds);
+}
+
+export function getGameShots(game: Game, shots: Shot[]): Shot[] {
+  return shots
+    .filter((s) => s.gameId === game.id)
+    .sort((a, b) => a.recordedAt.localeCompare(b.recordedAt));
+}
+
+export function getFirstThrowPlayer(game: Game): string | null {
+  const team = getActiveTeams(game)[0];
+  return team?.playerIds[0] ?? null;
+}
+
+/** Teams alternate each throw; within a team, players rotate in order. */
+export function getNextThrowPlayer(
+  game: Game,
+  shots: Shot[],
+  lastPlayerId: string | null,
+): string | null {
+  const activeTeams = getActiveTeams(game);
+  if (activeTeams.length === 0) return null;
+
+  if (!lastPlayerId) {
+    return getFirstThrowPlayer(game);
+  }
+
+  const gameShots = getGameShots(game, shots);
+  const lastTeam = getTeamForPlayer(game, lastPlayerId);
+  const lastTeamIndex = lastTeam
+    ? activeTeams.findIndex((t) => t.id === lastTeam.id)
+    : -1;
+  const nextTeamIndex =
+    lastTeamIndex >= 0 ? (lastTeamIndex + 1) % activeTeams.length : 0;
+  const nextTeam = activeTeams[nextTeamIndex]!;
+
+  const teamShotCount = gameShots.filter((s) => s.teamId === nextTeam.id).length;
+  const playerIndex = teamShotCount % nextTeam.playerIds.length;
+  return nextTeam.playerIds[playerIndex] ?? null;
+}
+
 export function teamDisplayName(team: Team, players: { id: string; name: string }[]): string {
-  if (team.name.trim()) return team.name.trim();
   const names = team.playerIds
     .map((id) => players.find((p) => p.id === id)?.name)
     .filter(Boolean);
@@ -53,7 +94,7 @@ export function recomputeGameState(game: Game, shots: Shot[]): RecomputedGameSta
     const teamId = shot.teamId;
     if (!teamId || eliminated.has(teamId)) continue;
 
-    if (isMissOutcome(shot.outcome)) {
+    if (isMissOutcome(shot.outcome, shot.score)) {
       const streak = (missStreaks[teamId] ?? 0) + 1;
       missStreaks[teamId] = streak;
       if (streak >= CONSECUTIVE_MISS_LIMIT) {
@@ -72,7 +113,7 @@ export function recomputeGameState(game: Game, shots: Shot[]): RecomputedGameSta
     }
   }
 
-  if (!winnerTeamId && game.mode === 'game') {
+  if (!winnerTeamId) {
     const active = game.teams.filter((t) => !eliminated.has(t.id));
     if (eliminated.size > 0 && active.length === 1) {
       winnerTeamId = active[0]!.id;
@@ -80,16 +121,7 @@ export function recomputeGameState(game: Game, shots: Shot[]): RecomputedGameSta
     }
   }
 
-  if (game.mode === 'practice') {
-    const team = game.teams[0];
-    if (team && eliminated.has(team.id)) {
-      endReason = 'three_misses';
-    }
-  }
-
-  const isEnded =
-    endReason === 'win_50' ||
-    (game.mode === 'game' && winnerTeamId !== null);
+  const isEnded = endReason === 'win_50' || winnerTeamId !== null;
 
   return {
     scores,

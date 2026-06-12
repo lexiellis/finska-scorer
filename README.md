@@ -29,6 +29,85 @@ Open the URL shown in the terminal (usually `http://localhost:5173`).
 
 Data is stored in the browser on that device (no account or server required).
 
+## Deploy with shared storage (Vercel + Supabase)
+
+This app can run as a shared scoreboard with one public URL and one shared data store.
+
+### 1) Create a Supabase project
+
+In the Supabase SQL editor, run:
+
+```sql
+create table if not exists public.app_state (
+  id text primary key,
+  data jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+create or replace function public.set_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = timezone('utc', now());
+  return new;
+end;
+$$;
+
+drop trigger if exists app_state_set_updated_at on public.app_state;
+create trigger app_state_set_updated_at
+before update on public.app_state
+for each row execute function public.set_updated_at();
+
+alter table public.app_state enable row level security;
+
+drop policy if exists "Public read app_state" on public.app_state;
+create policy "Public read app_state"
+on public.app_state
+for select
+to anon
+using (true);
+
+drop policy if exists "Public upsert app_state" on public.app_state;
+create policy "Public upsert app_state"
+on public.app_state
+for insert
+to anon
+with check (true);
+
+drop policy if exists "Public update app_state" on public.app_state;
+create policy "Public update app_state"
+on public.app_state
+for update
+to anon
+using (true)
+with check (true);
+```
+
+Then copy:
+- Project URL (`Settings -> API -> Project URL`)
+- `anon` public key (`Settings -> API -> Project API keys`)
+
+### 2) Configure environment variables
+
+Create `.env.local` for local testing:
+
+```bash
+VITE_SUPABASE_URL=your_project_url
+VITE_SUPABASE_ANON_KEY=your_anon_key
+```
+
+### 3) Deploy to Vercel
+
+1. Push this repo to GitHub.
+2. In Vercel, import the repo and deploy.
+3. In Vercel project settings, add:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+4. Redeploy.
+
+If Supabase env vars are not set, the app still works in local-only mode using browser storage.
+
 ## Shot fields
 
 | Field | Options |

@@ -1,18 +1,64 @@
 import { useCallback, useEffect, useState } from 'react';
 import { applyFinskaScore } from '../scoring';
-import { createId, loadData, saveData } from '../storage';
+import {
+  createId,
+  isRemoteStorageConfigured,
+  loadData,
+  loadRemoteData,
+  saveData,
+} from '../storage';
 import {
   getTeamForPlayer,
+  isMissOutcome,
   recomputeGameState,
 } from '../teams';
 import type { AppData, Distance, Game, Outcome, Player, Shot, ShotType, Team } from '../types';
 
+function recalculateShotScores(game: Game, shots: Shot[]): Shot[] {
+  const ordered = [...shots].sort((a, b) => a.recordedAt.localeCompare(b.recordedAt));
+  const scores = Object.fromEntries(game.teams.map((t) => [t.id, 0]));
+
+  return ordered.map((shot) => {
+    const scoreBefore = scores[shot.teamId] ?? 0;
+    let scoreAfter = scoreBefore;
+
+    if (!isMissOutcome(shot.outcome, shot.score)) {
+      const applied = applyFinskaScore(scoreBefore, shot.score);
+      scoreAfter = applied.newScore;
+    }
+
+    scores[shot.teamId] = scoreAfter;
+    return { ...shot, scoreBefore, scoreAfter };
+  });
+}
+
 export function useAppData() {
   const [data, setData] = useState<AppData>(loadData);
+  const [isHydrated, setIsHydrated] = useState(() => !isRemoteStorageConfigured());
 
   useEffect(() => {
-    saveData(data);
-  }, [data]);
+    let isCancelled = false;
+    if (!isRemoteStorageConfigured()) return;
+
+    async function hydrateFromSharedState() {
+      const remoteData = await loadRemoteData();
+      if (isCancelled) return;
+      if (remoteData) {
+        setData(remoteData);
+      }
+      setIsHydrated(true);
+    }
+
+    void hydrateFromSharedState();
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isHydrated) return;
+    void saveData(data);
+  }, [data, isHydrated]);
 
   const update = useCallback((fn: (prev: AppData) => AppData) => {
     setData((prev) => fn(prev));
@@ -54,26 +100,6 @@ export function useAppData() {
     return game;
   }, [update]);
 
-  const startPractice = useCallback((playerId: string) => {
-    const team: Team = {
-      id: createId(),
-      name: '',
-      playerIds: [playerId],
-    };
-    const game: Game = {
-      id: createId(),
-      mode: 'practice',
-      teams: [team],
-      scores: { [team.id]: 0 },
-      eliminatedTeamIds: [],
-      winnerTeamId: null,
-      startedAt: new Date().toISOString(),
-      endedAt: null,
-    };
-    update((prev) => ({ ...prev, games: [...prev.games, game] }));
-    return game;
-  }, [update]);
-
   const endGame = useCallback((gameId: string, winnerTeamId: string) => {
     update((prev) => ({
       ...prev,
@@ -85,43 +111,12 @@ export function useAppData() {
     }));
   }, [update]);
 
-  const endPractice = useCallback((gameId: string) => {
-    update((prev) => ({
-      ...prev,
-      games: prev.games.map((g) =>
-        g.id === gameId ? { ...g, endedAt: new Date().toISOString() } : g,
-      ),
-    }));
-  }, [update]);
-
   const abandonGame = useCallback((gameId: string) => {
     update((prev) => ({
       ...prev,
       games: prev.games.filter((g) => g.id !== gameId),
       shots: prev.shots.filter((s) => s.gameId !== gameId),
     }));
-  }, [update]);
-
-  const resetPracticeRound = useCallback((gameId: string) => {
-    update((prev) => {
-      const game = prev.games.find((g) => g.id === gameId);
-      if (!game || game.mode !== 'practice') return prev;
-      const teamId = game.teams[0]?.id;
-      if (!teamId) return prev;
-      const remainingShots = prev.shots.filter((s) => s.gameId !== gameId);
-      const clearedGame: Game = {
-        ...game,
-        scores: { [teamId]: 0 },
-        eliminatedTeamIds: [],
-        winnerTeamId: null,
-        endedAt: null,
-      };
-      return {
-        ...prev,
-        shots: remainingShots,
-        games: prev.games.map((g) => (g.id === gameId ? clearedGame : g)),
-      };
-    });
   }, [update]);
 
   const logShot = useCallback(
@@ -146,7 +141,7 @@ export function useAppData() {
         if (!team) return prev;
 
         const scoreBefore = game.scores[team.id] ?? 0;
-        const isMiss = params.outcome === 'Miss';
+        const isMiss = params.score === 0;
 
         const shot: Shot = {
           id: createId(),
@@ -242,17 +237,53 @@ export function useAppData() {
     });
   }, [update]);
 
+  const updateShot = useCallback(
+    (
+      shotId: string,
+      patch: Pick<Shot, 'shotType' | 'distance' | 'score' | 'outcome'>,
+    ) => {
+      update((prev) => {
+        const target = prev.shots.find((s) => s.id === shotId);
+        if (!target) return prev;
+
+        const game = prev.games.find((g) => g.id === target.gameId);
+        if (!game || game.endedAt) return prev;
+
+        const untouchedShots = prev.shots.filter((s) => s.gameId !== game.id);
+        const gameShots = prev.shots.filter((s) => s.gameId === game.id);
+        const patchedShots = gameShots.map((s) =>
+          s.id === shotId ? { ...s, ...patch } : s,
+        );
+        const recalculatedShots = recalculateShotScores(game, patchedShots);
+        const state = recomputeGameState(game, recalculatedShots);
+
+        const updatedGame: Game = {
+          ...game,
+          scores: state.scores,
+          eliminatedTeamIds: state.eliminatedTeamIds,
+          winnerTeamId: state.winnerTeamId,
+          endedAt: state.isEnded ? game.endedAt ?? new Date().toISOString() : null,
+        };
+
+        return {
+          ...prev,
+          shots: [...untouchedShots, ...recalculatedShots],
+          games: prev.games.map((g) => (g.id === game.id ? updatedGame : g)),
+        };
+      });
+    },
+    [update],
+  );
+
   return {
     data,
     addPlayer,
     removePlayer,
     startGame,
-    startPractice,
     endGame,
-    endPractice,
     abandonGame,
-    resetPracticeRound,
     logShot,
     undoLastShot,
+    updateShot,
   };
 }

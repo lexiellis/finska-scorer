@@ -4,7 +4,6 @@ import type { Player, Team } from '../types';
 
 interface TeamDraft {
   id: string;
-  name: string;
   playerIds: string[];
 }
 
@@ -15,8 +14,8 @@ interface TeamSetupProps {
 
 function defaultTeams(): TeamDraft[] {
   return [
-    { id: createId(), name: 'Team 1', playerIds: [] },
-    { id: createId(), name: 'Team 2', playerIds: [] },
+    { id: createId(), playerIds: [] },
+    { id: createId(), playerIds: [] },
   ];
 }
 
@@ -25,15 +24,8 @@ export function TeamSetup({ players, onStart }: TeamSetupProps) {
 
   const assignedIds = new Set(teams.flatMap((t) => t.playerIds));
 
-  const updateTeam = (id: string, patch: Partial<TeamDraft>) => {
-    setTeams((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
-  };
-
   const addTeam = () => {
-    setTeams((prev) => [
-      ...prev,
-      { id: createId(), name: `Team ${prev.length + 1}`, playerIds: [] },
-    ]);
+    setTeams((prev) => [...prev, { id: createId(), playerIds: [] }]);
   };
 
   const removeTeam = (id: string) => {
@@ -72,16 +64,10 @@ export function TeamSetup({ players, onStart }: TeamSetupProps) {
         </button>
       </div>
 
-      {teams.map((team) => (
+      {teams.map((team, index) => (
         <div key={team.id} className="team-card">
           <div className="team-card-header">
-            <input
-              type="text"
-              className="text-input team-name-input"
-              value={team.name}
-              onChange={(e) => updateTeam(team.id, { name: e.target.value })}
-              placeholder="Team name"
-            />
+            <span className="field-label">Team {index + 1}</span>
             {teams.length > 2 && (
               <button
                 type="button"
@@ -120,7 +106,7 @@ export function TeamSetup({ players, onStart }: TeamSetupProps) {
           onStart(
             teams.map((t) => ({
               id: t.id,
-              name: t.name.trim() || 'Team',
+              name: '',
               playerIds: t.playerIds,
             })),
           )
