@@ -72,11 +72,22 @@ function migrate(data: AppData): AppData {
   };
 }
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+function isHttpUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL ?? '').trim();
+const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? '').trim();
+const hasAnySupabaseEnv = supabaseUrl.length > 0 || supabaseAnonKey.length > 0;
+const isSupabaseConfigValid = isHttpUrl(supabaseUrl) && supabaseAnonKey.length > 0;
 
 const supabase =
-  supabaseUrl && supabaseAnonKey
+  isSupabaseConfigValid
     ? createClient(supabaseUrl, supabaseAnonKey)
     : null;
 
@@ -89,9 +100,13 @@ export function isRemoteStorageConfigured(): boolean {
 function warnIfRemoteStorageDisabled() {
   if (supabase || warnedMissingSupabaseConfig) return;
   warnedMissingSupabaseConfig = true;
-  console.info(
-    'Supabase not configured (missing VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY). Using local-only storage.',
-  );
+  if (hasAnySupabaseEnv) {
+    console.warn(
+      'Supabase config is invalid. VITE_SUPABASE_URL must be a full http(s) URL and VITE_SUPABASE_ANON_KEY must be set. Using local-only storage.',
+    );
+    return;
+  }
+  console.info('Supabase not configured. Using local-only storage.');
 }
 
 export function loadData(): AppData {
