@@ -92,13 +92,23 @@ function ShotEditForm({
   onSave: () => void;
   onCancel: () => void;
 }) {
+  const isDistanceLocked = draft.shotType === '12 Break';
+
   return (
     <div className="history-edit-grid" onClick={(e) => e.stopPropagation()}>
       <select
         className="history-input"
         value={draft.shotType}
         onChange={(e) =>
-          setDraft((prev) => (prev ? { ...prev, shotType: e.target.value as ShotType } : prev))
+          setDraft((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  shotType: e.target.value as ShotType,
+                  distance: e.target.value === '12 Break' ? 4 : prev.distance,
+                }
+              : prev,
+          )
         }
       >
         {SHOT_TYPES.map((v) => (
@@ -110,6 +120,7 @@ function ShotEditForm({
       <select
         className="history-input"
         value={String(draft.distance)}
+        disabled={isDistanceLocked}
         onChange={(e) =>
           setDraft((prev) => {
             if (!prev) return prev;

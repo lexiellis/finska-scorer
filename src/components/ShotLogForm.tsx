@@ -92,6 +92,8 @@ export function ShotLogForm({
     else openHistory();
   };
 
+  const isDistanceLocked = shotType === '12 Break';
+
   return (
     <div className="shot-log">
       {flash && (
@@ -126,7 +128,7 @@ export function ShotLogForm({
       <div className="log-fields">
         <section className="log-section log-section--type">
           <h3 className="log-section-title">Shot type</h3>
-          <div className="btn-grid cols-5">
+          <div className="btn-grid cols-4">
             {SHOT_TYPES.map((t) => (
               <button
                 key={t}
@@ -141,14 +143,19 @@ export function ShotLogForm({
         </section>
 
         <section className="log-section log-section--distance">
-          <h3 className="log-section-title">Distance</h3>
-          <div className="btn-grid cols-4 btn-grid--distance">
+          <h3 className="log-section-title">
+            Distance {isDistanceLocked ? '(locked to 4m)' : ''}
+          </h3>
+          <div className="btn-grid cols-5 btn-grid--distance">
             {DISTANCES.map((d) => (
               <button
                 key={String(d)}
                 type="button"
                 className={`pick-btn pick-btn--compact ${distance === d ? 'selected' : ''}`}
-                onClick={() => onDistance(d)}
+                onClick={() => {
+                  if (!isDistanceLocked) onDistance(d);
+                }}
+                disabled={isDistanceLocked}
               >
                 {typeof d === 'string' ? d : `${d}m`}
               </button>

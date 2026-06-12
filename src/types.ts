@@ -13,7 +13,7 @@ export const SHOT_TYPES = [
 
 export type ShotType = (typeof SHOT_TYPES)[number];
 
-export const DISTANCES = [4, 6, 8, '10+'] as const;
+export const DISTANCES = [4, 5, 6, 7, '9+'] as const;
 
 export type Distance = (typeof DISTANCES)[number];
 

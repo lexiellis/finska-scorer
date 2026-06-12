@@ -407,8 +407,12 @@
   grid-template-columns: repeat(4, 1fr);
 }
 
+.btn-grid.cols-5 {
+  grid-template-columns: repeat(5, 1fr);
+}
+
 .btn-grid--distance {
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
 }
 
 .pick-btn {
@@ -1534,7 +1538,7 @@
 }
 
 .shot-log .log-fields {
-  grid-template-rows: minmax(0, 0.78fr) minmax(0, 0.52fr) minmax(0, 1.28fr) minmax(0, 0.82fr);
+  grid-template-rows: minmax(0, 0.95fr) minmax(0, 0.5fr) minmax(0, 1.2fr) minmax(0, 0.8fr);
   gap: clamp(0.28rem, 0.75vh, 0.48rem);
 }
 

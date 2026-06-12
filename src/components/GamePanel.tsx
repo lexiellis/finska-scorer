@@ -83,6 +83,12 @@ export function GamePanel({
     }
   }, [activeGame, activePlayerId, completedGameId, data.shots]);
 
+  useEffect(() => {
+    if (shotType === '12 Break' && distance !== 4) {
+      setDistance(4);
+    }
+  }, [distance, shotType]);
+
   const resetShotForm = () => {
     setShotType(null);
     setDistance(null);
