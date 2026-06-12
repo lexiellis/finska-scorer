@@ -1,5 +1,7 @@
 export const SHOT_TYPES = [
   'Standard',
+  '12 Break',
+  'Inertia',
   'Retro',
   'Elephant',
   'Kick',

@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import { useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 import { FINSKA_TARGET } from '../scoring';
 import { getOutcomeIcon, OUTCOME_BUTTON_LABELS } from '../outcomeDisplay';
 import { getGameShots, teamDisplayName } from '../teams';
@@ -174,12 +174,9 @@ export function ScoreBoard({
   shots,
   activePlayerId,
   mode,
-  scoreTravel,
   onUpdateShot,
 }: ScoreBoardProps) {
   const throws = useMemo(() => getGameShots(game, shots), [game, shots]);
-  const boardRef = useRef<HTMLDivElement>(null);
-  const [dropReady, setDropReady] = useState(false);
 
   const [editingShotId, setEditingShotId] = useState<string | null>(null);
   const [draft, setDraft] = useState<{
@@ -194,26 +191,6 @@ export function ScoreBoard({
     [game.teams, throws],
   );
   const rowCount = Math.max(0, ...teamShots.map((rows) => rows.length));
-
-  useLayoutEffect(() => {
-    if (mode !== 'expanded') {
-      setDropReady(false);
-      return;
-    }
-    const board = boardRef.current;
-    if (!board) return;
-
-    const column = board.querySelector<HTMLElement>('.score-bubble--column');
-    const head = board.querySelector<HTMLElement>('.score-bubble-column-head');
-    const footer = board.querySelector<HTMLElement>('.score-bubble-column-footer');
-    if (scoreTravel) {
-      board.style.setProperty('--score-drop', `${scoreTravel}px`);
-    } else if (column && head && footer) {
-      const travel = head.getBoundingClientRect().bottom - footer.getBoundingClientRect().top + 8;
-      board.style.setProperty('--score-drop', `${Math.max(48, travel)}px`);
-    }
-    requestAnimationFrame(() => setDropReady(true));
-  }, [mode, rowCount, game.scores, scoreTravel]);
 
   const teamMeta = game.teams.map((team, teamIndex) => {
     const total = game.scores[team.id] ?? 0;
@@ -238,8 +215,14 @@ export function ScoreBoard({
         <div className="score-bubbles">
           {teamMeta.map(({ team, total, eliminated, isActive, name }) => (
             <div key={team.id} className={teamBubbleClass(isActive, eliminated, total)}>
-              <span className="score-bubble-name">{name}</span>
-              {isActive && <span className="score-bubble-status">Throwing</span>}
+              <span className="score-bubble-name">
+                {isActive && (
+                  <span className="score-bubble-status-icon" aria-hidden>
+                    🎯
+                  </span>
+                )}
+                {name}
+              </span>
               <span className="score-bubble-total">{total}</span>
             </div>
           ))}
@@ -250,14 +233,14 @@ export function ScoreBoard({
 
   if (throws.length === 0) {
     return (
-      <div className="score-board-expanded score-board-expanded--empty" ref={boardRef}>
+      <div className="score-board-expanded score-board-expanded--empty">
         <p className="empty-state">No shots logged yet.</p>
       </div>
     );
   }
 
   return (
-    <div className="score-board-expanded" ref={boardRef}>
+    <div className="score-board-expanded">
       <div className="score-board-expanded-layout">
         <div className="score-board-row-gutter">
           <span className="score-board-gutter-head">#</span>
@@ -276,14 +259,14 @@ export function ScoreBoard({
               className={`${teamBubbleClass(isActive, eliminated, total)} score-bubble--column`}
             >
               <div className="score-bubble-column-head">
-                <span className="score-bubble-name">{name}</span>
-                {isActive && <span className="score-bubble-status">Throwing</span>}
-              </div>
-
-              <div className="score-bubble-column-cols">
-                <span className="score-bubble-col-label">Shot</span>
-                <span className="score-bubble-col-label">Throw</span>
-                <span className="score-bubble-col-label">Total</span>
+                <span className="score-bubble-name">
+                  {isActive && (
+                    <span className="score-bubble-status-icon" aria-hidden>
+                      🎯
+                    </span>
+                  )}
+                  {name}
+                </span>
               </div>
 
               <div className="score-bubble-column-rows">
@@ -350,30 +333,16 @@ export function ScoreBoard({
 
                   return (
                     <div key={shot.id} className="score-bubble-row" onClick={startEdit}>
-                      <div className="score-bubble-row-shot">
-                        <ShotInfoCell shot={shot} isMiss={isMiss} isBust={isBust} />
-                      </div>
+                      <div className={`score-bubble-row-total ${scoreClass}`}>{shot.scoreAfter}</div>
                       <div className={`score-bubble-row-throw ${scoreClass}`}>
                         {formatPins(shot.score)}
                       </div>
-                      <div className={`score-bubble-row-total ${scoreClass}`}>{shot.scoreAfter}</div>
+                      <div className="score-bubble-row-shot">
+                        <ShotInfoCell shot={shot} isMiss={isMiss} isBust={isBust} />
+                      </div>
                     </div>
                   );
                 })}
-              </div>
-
-              <div className="score-bubble-column-footer">
-                <span
-                  className={[
-                    'score-bubble-total',
-                    'score-bubble-total--footer',
-                    dropReady ? 'score-bubble-total--drop-in' : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
-                >
-                  {total}
-                </span>
               </div>
             </div>
           ))}

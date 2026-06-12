@@ -33,7 +33,7 @@ export default function App() {
     <div className={`app ${loggingActive ? 'app--logging' : ''}`}>
       <header className="app-header">
         {loggingActive ? (
-          <h1>Finska</h1>
+          <h1>🎯 Finska Scorer</h1>
         ) : (
           <>
             <h1>Finska Scorer</h1>

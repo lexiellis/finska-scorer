@@ -3,10 +3,8 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Cell,
+  LabelList,
   Legend,
-  Pie,
-  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -14,18 +12,7 @@ import {
 } from 'recharts';
 import { computePlayerStats } from '../stats';
 import type { AppData } from '../types';
-import { OUTCOMES, SHOT_TYPES } from '../types';
-
-const CHART_COLORS = [
-  '#2d6a4f',
-  '#40916c',
-  '#52b788',
-  '#74c69d',
-  '#95d5b2',
-  '#b7e4c7',
-  '#d8f3dc',
-  '#1b4332',
-];
+import { OUTCOMES } from '../types';
 
 interface StatsPanelProps {
   data: AppData;
@@ -61,12 +48,6 @@ export function StatsPanel({ data }: StatsPanelProps) {
       shots: s.totalShots,
     };
   });
-
-  const shotTypeData = stats
-    ? SHOT_TYPES.map((t) => ({ name: t, count: stats.shotTypeCounts[t] })).filter(
-        (d) => d.count > 0,
-      )
-    : [];
 
   const outcomeData = stats
     ? OUTCOMES.map((o) => ({ name: o, count: stats.outcomeCounts[o] })).filter(
@@ -129,6 +110,18 @@ export function StatsPanel({ data }: StatsPanelProps) {
               <span className="stat-value">{stats.avgScorePerShot.toFixed(1)}</span>
               <span className="stat-label">Avg pts/shot</span>
             </div>
+            <div className="stat-card">
+              <span className="stat-value">{Math.round(stats.scoringRate)}%</span>
+              <span className="stat-label">Scoring rate</span>
+            </div>
+            <div className="stat-card">
+              <span className="stat-value">{Math.round(stats.twelveRate)}%</span>
+              <span className="stat-label">12-pin rate</span>
+            </div>
+            <div className="stat-card">
+              <span className="stat-value">{stats.bestScoringStreak}</span>
+              <span className="stat-label">Best scoring streak</span>
+            </div>
           </div>
 
           <section className="chart-card">
@@ -159,28 +152,37 @@ export function StatsPanel({ data }: StatsPanelProps) {
             </section>
           )}
 
-          {shotTypeData.length > 0 && (
+          {stats.shotTypeDistanceSuccess.length > 0 && (
             <section className="chart-card">
-              <h3>Shot type</h3>
-              <ResponsiveContainer width="100%" height={240}>
-                <PieChart>
-                  <Pie
-                    data={shotTypeData}
-                    dataKey="count"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    label={({ name, percent }) =>
-                      `${name} ${((percent ?? 0) * 100).toFixed(0)}%`
-                    }
-                  >
-                    {shotTypeData.map((_, i) => (
-                      <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                    ))}
-                  </Pie>
+              <h3>Success rate by shot type @ distance</h3>
+              <ResponsiveContainer width="100%" height={320}>
+                <BarChart
+                  data={stats.shotTypeDistanceSuccess}
+                  layout="vertical"
+                  margin={{ left: 8, right: 10 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e8ede9" />
+                  <XAxis
+                    type="number"
+                    domain={[0, 100]}
+                    tick={{ fontSize: 11 }}
+                    tickFormatter={(v) => `${v}%`}
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="label"
+                    width={150}
+                    tick={{ fontSize: 10 }}
+                  />
                   <Tooltip />
-                </PieChart>
+                  <Bar dataKey="successRate" name="Success %" fill="#2d6a4f" radius={[0, 4, 4, 0]}>
+                    <LabelList
+                      dataKey="successRate"
+                      position="right"
+                      formatter={(v) => `${Math.round(Number(v ?? 0))}%`}
+                    />
+                  </Bar>
+                </BarChart>
               </ResponsiveContainer>
             </section>
           )}

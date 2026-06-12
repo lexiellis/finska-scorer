@@ -126,7 +126,7 @@ export function ShotLogForm({
       <div className="log-fields">
         <section className="log-section log-section--type">
           <h3 className="log-section-title">Shot type</h3>
-          <div className="btn-grid cols-4">
+          <div className="btn-grid cols-5">
             {SHOT_TYPES.map((t) => (
               <button
                 key={t}
@@ -157,7 +157,7 @@ export function ShotLogForm({
         </section>
 
         <section className="log-section log-section--score">
-          <h3 className="log-section-title">Pins knocked</h3>
+          <h3 className="log-section-title">Score</h3>
           <div className="score-grid">
             {Array.from({ length: 13 }, (_, i) => (
               <button
