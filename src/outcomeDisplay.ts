@@ -3,18 +3,18 @@ import type { Outcome } from './types';
 export function getOutcomeIcon(outcome: Outcome | string): string {
   switch (outcome) {
     case 'Intended':
-      return '🎯';
+      return '✅';
     case 'So-so':
-      return '🤏';
+      return '🤷';
     case 'Unintended':
-      return '🫠';
+      return '❌';
     default:
       return '⚪';
   }
 }
 
 export const OUTCOME_BUTTON_LABELS: Record<Outcome, string> = {
-  Intended: '🎯 Intended',
-  'So-so': '🤏 So-so',
-  Unintended: '🫠 Unintended',
+  Intended: '✅ Intended',
+  'So-so': '🤷 So-so',
+  Unintended: '❌ Unintended',
 };
