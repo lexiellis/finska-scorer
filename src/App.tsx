@@ -27,6 +27,7 @@ export default function App() {
     logShot,
     undoLastShot,
     updateShot,
+    importCsvLog,
   } = useAppData();
 
   const loggingActive = tab === 'game' && getActiveGame(data) !== null;
@@ -64,6 +65,7 @@ export default function App() {
             data={data}
             onAdd={addPlayer}
             onRemove={removePlayer}
+            onImportCsv={importCsvLog}
           />
         )}
       </main>

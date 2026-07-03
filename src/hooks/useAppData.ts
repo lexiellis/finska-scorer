@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { importBundledMolkkyLog, importLogCsv } from '../importLogCsv';
 import { applyFinskaScore } from '../scoring';
 import {
   createId,
@@ -34,22 +35,25 @@ function recalculateShotScores(game: Game, shots: Shot[]): Shot[] {
 
 export function useAppData() {
   const [data, setData] = useState<AppData>(loadData);
-  const [isHydrated, setIsHydrated] = useState(() => !isRemoteStorageConfigured());
+  const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
     let isCancelled = false;
-    if (!isRemoteStorageConfigured()) return;
 
-    async function hydrateFromSharedState() {
-      const remoteData = await loadRemoteData();
-      if (isCancelled) return;
-      if (remoteData) {
-        setData(remoteData);
+    async function hydrate() {
+      let loaded = loadData();
+      if (isRemoteStorageConfigured()) {
+        const remoteData = await loadRemoteData();
+        if (remoteData) loaded = remoteData;
       }
+
+      const imported = await importBundledMolkkyLog(loaded);
+      if (isCancelled) return;
+      setData(imported.data);
       setIsHydrated(true);
     }
 
-    void hydrateFromSharedState();
+    void hydrate();
     return () => {
       isCancelled = true;
     };
@@ -331,6 +335,16 @@ export function useAppData() {
     [update],
   );
 
+  const importCsvLog = useCallback((csvText: string) => {
+    let resultMessage = '';
+    update((prev) => {
+      const result = importLogCsv(csvText, prev);
+      resultMessage = result.message;
+      return result.data;
+    });
+    return resultMessage;
+  }, [update]);
+
   return {
     data,
     addPlayer,
@@ -343,5 +357,6 @@ export function useAppData() {
     logShot,
     undoLastShot,
     updateShot,
+    importCsvLog,
   };
 }
