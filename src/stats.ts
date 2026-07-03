@@ -1,6 +1,14 @@
 import { getGamePlayerIds } from './teams';
-import type { AppData, Game, Outcome, Player, Shot, ShotType } from './types';
-import { OUTCOMES, SHOT_TYPES } from './types';
+import type { AppData, Distance, Game, Outcome, Player, Shot, ShotType } from './types';
+import { DISTANCES, OUTCOMES, SHOT_TYPES } from './types';
+
+export function formatDistanceLabel(distance: Distance): string {
+  return typeof distance === 'string' ? distance : `${distance}m`;
+}
+
+export function isHitShot(shot: Shot): boolean {
+  return shot.score > 0;
+}
 
 export interface PlayerStats {
   player: Player;
@@ -10,6 +18,7 @@ export interface PlayerStats {
   totalShots: number;
   totalPoints: number;
   avgScorePerShot: number;
+  hitRate: number;
   shotTypeCounts: Record<ShotType, number>;
   outcomeCounts: Record<Outcome, number>;
   distanceBuckets: { label: string; count: number }[];
@@ -17,13 +26,27 @@ export interface PlayerStats {
   scoringRate: number;
   twelveRate: number;
   bestScoringStreak: number;
-  shotTypeDistanceSuccess: {
-    label: string;
-    shotType: ShotType;
-    distance: string;
-    attempts: number;
-    successRate: number;
-  }[];
+  heatmapGrid: HeatmapRow[];
+  outcomeByShotType: OutcomeByTypeRow[];
+}
+
+export interface HeatmapCell {
+  distance: string;
+  attempts: number;
+  successRate: number | null;
+}
+
+export interface HeatmapRow {
+  shotType: ShotType | 'ALL SHOTS';
+  cells: HeatmapCell[];
+  overallRate: number | null;
+}
+
+export interface OutcomeByTypeRow {
+  shotType: ShotType;
+  throws: number;
+  outcomeCounts: Record<Outcome, number>;
+  outcomeRates: Record<Outcome, number | null>;
 }
 
 function initShotTypeCounts(): Record<ShotType, number> {
@@ -34,8 +57,72 @@ function initOutcomeCounts(): Record<Outcome, number> {
   return Object.fromEntries(OUTCOMES.map((o) => [o, 0])) as Record<Outcome, number>;
 }
 
+const DISTANCE_KEYS = DISTANCES.map((d) => (typeof d === 'string' ? d : String(d)));
+
 export function getPlayerShots(data: AppData, playerId: string): Shot[] {
   return data.shots.filter((s) => s.playerId === playerId);
+}
+
+function buildHeatmapGrid(shots: Shot[]): HeatmapRow[] {
+  const rows: HeatmapRow[] = SHOT_TYPES.map((shotType) => {
+    const typeShots = shots.filter((s) => s.shotType === shotType);
+    const cells: HeatmapCell[] = DISTANCE_KEYS.map((distance) => {
+      const cellShots = typeShots.filter((s) => String(s.distance) === distance);
+      const attempts = cellShots.length;
+      const successes = cellShots.filter(isHitShot).length;
+      return {
+        distance,
+        attempts,
+        successRate: attempts > 0 ? (successes / attempts) * 100 : null,
+      };
+    });
+    const attempts = typeShots.length;
+    const successes = typeShots.filter(isHitShot).length;
+    return {
+      shotType,
+      cells,
+      overallRate: attempts > 0 ? (successes / attempts) * 100 : null,
+    };
+  }).filter((row) => row.cells.some((c) => c.attempts > 0));
+
+  if (shots.length > 0) {
+    const cells: HeatmapCell[] = DISTANCE_KEYS.map((distance) => {
+      const cellShots = shots.filter((s) => String(s.distance) === distance);
+      const attempts = cellShots.length;
+      const successes = cellShots.filter(isHitShot).length;
+      return {
+        distance,
+        attempts,
+        successRate: attempts > 0 ? (successes / attempts) * 100 : null,
+      };
+    });
+    const successes = shots.filter(isHitShot).length;
+    rows.push({
+      shotType: 'ALL SHOTS',
+      cells,
+      overallRate: (successes / shots.length) * 100,
+    });
+  }
+
+  return rows;
+}
+
+function buildOutcomeByShotType(shots: Shot[]): OutcomeByTypeRow[] {
+  return SHOT_TYPES.map((shotType) => {
+    const typeShots = shots.filter((s) => s.shotType === shotType);
+    const outcomeCounts = initOutcomeCounts();
+    for (const shot of typeShots) {
+      outcomeCounts[shot.outcome]++;
+    }
+    const throws = typeShots.length;
+    const outcomeRates = Object.fromEntries(
+      OUTCOMES.map((o) => [
+        o,
+        throws > 0 ? (outcomeCounts[o] / throws) * 100 : null,
+      ]),
+    ) as Record<Outcome, number | null>;
+    return { shotType, throws, outcomeCounts, outcomeRates };
+  }).filter((row) => row.throws > 0);
 }
 
 export function computePlayerStats(data: AppData, playerId: string): PlayerStats | null {
@@ -58,7 +145,6 @@ export function computePlayerStats(data: AppData, playerId: string): PlayerStats
   const outcomeCounts = initOutcomeCounts();
   const distanceMap = new Map<string, number>();
   const scoreMap = new Map<number, number>();
-  const successByTypeDistance = new Map<string, { shotType: ShotType; distance: string; attempts: number; successes: number }>();
   let madeShots = 0;
   let twelveShots = 0;
   let currentScoringStreak = 0;
@@ -73,16 +159,7 @@ export function computePlayerStats(data: AppData, playerId: string): PlayerStats
     distanceMap.set(distKey, (distanceMap.get(distKey) ?? 0) + 1);
     scoreMap.set(shot.score, (scoreMap.get(shot.score) ?? 0) + 1);
 
-    const comboKey = `${shot.shotType}@@${distKey}`;
-    const combo = successByTypeDistance.get(comboKey) ?? {
-      shotType: shot.shotType,
-      distance: distKey,
-      attempts: 0,
-      successes: 0,
-    };
-    combo.attempts += 1;
-    if (shot.score > 0) {
-      combo.successes += 1;
+    if (isHitShot(shot)) {
       madeShots += 1;
       currentScoringStreak += 1;
       bestScoringStreak = Math.max(bestScoringStreak, currentScoringStreak);
@@ -92,11 +169,10 @@ export function computePlayerStats(data: AppData, playerId: string): PlayerStats
     if (shot.score === 12) {
       twelveShots += 1;
     }
-    successByTypeDistance.set(comboKey, combo);
   }
 
   const distanceBuckets = [...distanceMap.entries()]
-    .map(([label, count]) => ({ label, count }))
+    .map(([label, count]) => ({ label: label.endsWith('+') ? label : `${label}m`, count }))
     .sort((a, b) => {
       if (a.label.endsWith('+')) return 1;
       if (b.label.endsWith('+')) return -1;
@@ -108,21 +184,6 @@ export function computePlayerStats(data: AppData, playerId: string): PlayerStats
     count: scoreMap.get(score) ?? 0,
   }));
 
-  const shotTypeDistanceSuccess = [...successByTypeDistance.values()]
-    .map((entry) => ({
-      label: `${entry.shotType} @ ${entry.distance}`,
-      shotType: entry.shotType,
-      distance: entry.distance,
-      attempts: entry.attempts,
-      successRate: entry.attempts > 0 ? (entry.successes / entry.attempts) * 100 : 0,
-    }))
-    .sort((a, b) => {
-      if (a.distance.endsWith('+') && !b.distance.endsWith('+')) return 1;
-      if (!a.distance.endsWith('+') && b.distance.endsWith('+')) return -1;
-      if (a.distance !== b.distance) return Number(a.distance) - Number(b.distance);
-      return a.shotType.localeCompare(b.shotType);
-    });
-
   return {
     player,
     gamesPlayed,
@@ -131,6 +192,7 @@ export function computePlayerStats(data: AppData, playerId: string): PlayerStats
     totalShots: shots.length,
     totalPoints,
     avgScorePerShot: shots.length > 0 ? totalPoints / shots.length : 0,
+    hitRate: shots.length > 0 ? (madeShots / shots.length) * 100 : 0,
     shotTypeCounts,
     outcomeCounts,
     distanceBuckets,
@@ -138,8 +200,13 @@ export function computePlayerStats(data: AppData, playerId: string): PlayerStats
     scoringRate: shots.length > 0 ? (madeShots / shots.length) * 100 : 0,
     twelveRate: shots.length > 0 ? (twelveShots / shots.length) * 100 : 0,
     bestScoringStreak,
-    shotTypeDistanceSuccess,
+    heatmapGrid: buildHeatmapGrid(shots),
+    outcomeByShotType: buildOutcomeByShotType(shots),
   };
+}
+
+export function getPlayerThrowCount(data: AppData, playerId: string): number {
+  return data.shots.filter((s) => s.playerId === playerId).length;
 }
 
 export function getActiveGame(data: AppData): Game | null {

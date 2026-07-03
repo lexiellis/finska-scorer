@@ -1,4 +1,4 @@
-import type { AppData, Game, Player } from './types';
+import type { AppData, Distance, Game, Outcome, Player } from './types';
 import { createClient } from '@supabase/supabase-js';
 
 const STORAGE_KEY = 'finska-scorer-data';
@@ -16,17 +16,28 @@ const emptyData = (): AppData => ({
   shots: [],
 });
 
+function migrateDistance(distance: Distance | '9+' | string): Distance {
+  if (distance === '9+') return '12+';
+  return distance as Distance;
+}
+
+function migrateOutcome(outcome: string): Outcome {
+  if (outcome === 'So-So') return 'So-so';
+  return outcome as Outcome;
+}
+
 function migrateGame(raw: Game, players: Player[]): Game {
   const storedMode = (raw as { mode?: string }).mode;
   const endedAt =
     storedMode === 'practice' && !raw.endedAt
       ? new Date().toISOString()
       : raw.endedAt;
+  const mode = storedMode === 'stats' ? 'stats' : 'game';
 
   if (raw.teams?.length) {
     return {
       ...raw,
-      mode: 'game',
+      mode,
       endedAt,
       eliminatedTeamIds: raw.eliminatedTeamIds ?? [],
       winnerTeamId: raw.winnerTeamId ?? null,
@@ -48,7 +59,7 @@ function migrateGame(raw: Game, players: Player[]): Game {
 
   return {
     ...raw,
-    mode: 'game',
+    mode,
     teams,
     scores,
     eliminatedTeamIds: [],
@@ -68,6 +79,8 @@ function migrate(data: AppData): AppData {
       teamId: s.teamId ?? s.playerId,
       scoreBefore: s.scoreBefore ?? 0,
       scoreAfter: s.scoreAfter ?? s.score,
+      distance: migrateDistance(s.distance as Distance | '9+'),
+      outcome: migrateOutcome(s.outcome as string),
     })),
   };
 }

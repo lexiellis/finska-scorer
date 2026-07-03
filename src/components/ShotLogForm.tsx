@@ -146,7 +146,7 @@ export function ShotLogForm({
           <h3 className="log-section-title">
             Distance {isDistanceLocked ? '(locked to 4m)' : ''}
           </h3>
-          <div className="btn-grid cols-5 btn-grid--distance">
+          <div className="btn-grid cols-6 btn-grid--distance">
             {DISTANCES.map((d) => (
               <button
                 key={String(d)}
@@ -182,7 +182,7 @@ export function ShotLogForm({
 
         <section className="log-section log-section--outcome">
           <h3 className="log-section-title">Outcome</h3>
-          <div className="btn-grid cols-3">
+          <div className="btn-grid cols-3 btn-grid--outcomes">
             {OUTCOMES.map((o) => (
               <button
                 key={o}

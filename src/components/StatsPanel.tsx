@@ -3,19 +3,30 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  LabelList,
-  Legend,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts';
-import { computePlayerStats } from '../stats';
+import { computePlayerStats, getPlayerThrowCount } from '../stats';
 import type { AppData } from '../types';
-import { OUTCOMES } from '../types';
+import { OUTCOMES, SHOT_TYPES } from '../types';
+import { getOutcomeIcon } from '../outcomeDisplay';
 
 interface StatsPanelProps {
   data: AppData;
+}
+
+function heatmapCellClass(rate: number | null): string {
+  if (rate === null) return 'heatmap-cell heatmap-cell--empty';
+  if (rate >= 80) return 'heatmap-cell heatmap-cell--high';
+  if (rate >= 50) return 'heatmap-cell heatmap-cell--mid';
+  return 'heatmap-cell heatmap-cell--low';
+}
+
+function formatRate(rate: number | null): string {
+  if (rate === null) return '—';
+  return `${Math.round(rate)}%`;
 }
 
 export function StatsPanel({ data }: StatsPanelProps) {
@@ -43,14 +54,14 @@ export function StatsPanel({ data }: StatsPanelProps) {
     const s = computePlayerStats(data, p.id)!;
     return {
       name: p.name,
-      winRate: Math.round(s.winRate),
+      throws: s.totalShots,
+      hitRate: Math.round(s.hitRate),
       avgScore: Number(s.avgScorePerShot.toFixed(1)),
-      shots: s.totalShots,
     };
   });
 
-  const outcomeData = stats
-    ? OUTCOMES.map((o) => ({ name: o, count: stats.outcomeCounts[o] })).filter(
+  const shotTypeData = stats
+    ? SHOT_TYPES.map((t) => ({ name: t, count: stats.shotTypeCounts[t] })).filter(
         (d) => d.count > 0,
       )
     : [];
@@ -70,22 +81,22 @@ export function StatsPanel({ data }: StatsPanelProps) {
             onClick={() => setSelectedId(p.id)}
           >
             {p.name}
+            <span className="chip-score">{getPlayerThrowCount(data, p.id)}</span>
           </button>
         ))}
       </div>
 
-      {overview.some((o) => o.shots > 0) && (
+      {overview.some((o) => o.throws > 0) && (
         <section className="chart-card">
-          <h3>All players overview</h3>
+          <h3>All players</h3>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={overview} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e8ede9" />
               <XAxis dataKey="name" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} />
               <Tooltip />
-              <Legend />
-              <Bar dataKey="winRate" name="Win %" fill="#2d6a4f" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="avgScore" name="Avg score/shot" fill="#52b788" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="throws" name="Throws" fill="#1b4332" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="hitRate" name="Hit %" fill="#2d6a4f" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </section>
@@ -93,49 +104,126 @@ export function StatsPanel({ data }: StatsPanelProps) {
 
       {stats && stats.totalShots > 0 ? (
         <>
-          <div className="stat-cards">
-            <div className="stat-card">
-              <span className="stat-value">{stats.wins}</span>
-              <span className="stat-label">Wins</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-value">{Math.round(stats.winRate)}%</span>
-              <span className="stat-label">Win rate</span>
-            </div>
+          <div className="stat-cards stat-cards--primary">
             <div className="stat-card">
               <span className="stat-value">{stats.totalShots}</span>
-              <span className="stat-label">Shots logged</span>
+              <span className="stat-label">Throws</span>
+            </div>
+            <div className="stat-card">
+              <span className="stat-value">{Math.round(stats.hitRate)}%</span>
+              <span className="stat-label">Hit rate</span>
             </div>
             <div className="stat-card">
               <span className="stat-value">{stats.avgScorePerShot.toFixed(1)}</span>
-              <span className="stat-label">Avg pts/shot</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-value">{Math.round(stats.scoringRate)}%</span>
-              <span className="stat-label">Scoring rate</span>
+              <span className="stat-label">Avg pins/throw</span>
             </div>
             <div className="stat-card">
               <span className="stat-value">{Math.round(stats.twelveRate)}%</span>
               <span className="stat-label">12-pin rate</span>
             </div>
-            <div className="stat-card">
-              <span className="stat-value">{stats.bestScoringStreak}</span>
-              <span className="stat-label">Best scoring streak</span>
-            </div>
           </div>
 
-          <section className="chart-card">
-            <h3>Score distribution (0–12)</h3>
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={stats.scoreDistribution}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e8ede9" />
-                <XAxis dataKey="score" tick={{ fontSize: 11 }} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Bar dataKey="count" name="Shots" fill="#40916c" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </section>
+          {stats.heatmapGrid.length > 0 && (
+            <section className="chart-card">
+              <h3>Hit rate by shot type &amp; distance</h3>
+              <div className="heatmap-wrap">
+                <table className="heatmap-table">
+                  <thead>
+                    <tr>
+                      <th>Shot type</th>
+                      {stats.heatmapGrid[0]?.cells.map((cell) => (
+                        <th key={cell.distance}>
+                          {cell.distance.endsWith('+') ? cell.distance : `${cell.distance}m`}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stats.heatmapGrid.map((row) => (
+                      <tr
+                        key={row.shotType}
+                        className={row.shotType === 'ALL SHOTS' ? 'heatmap-row--total' : ''}
+                      >
+                        <th scope="row">{row.shotType}</th>
+                        {row.cells.map((cell) => (
+                          <td key={cell.distance}>
+                            <span
+                              className={heatmapCellClass(cell.successRate)}
+                              title={
+                                cell.attempts > 0
+                                  ? `${cell.attempts} throws`
+                                  : 'No throws'
+                              }
+                            >
+                              {formatRate(cell.successRate)}
+                            </span>
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          {stats.outcomeByShotType.length > 0 && (
+            <section className="chart-card">
+              <h3>Outcomes by shot type</h3>
+              <div className="outcome-table-wrap">
+                <table className="outcome-table">
+                  <thead>
+                    <tr>
+                      <th>Shot type</th>
+                      <th>Throws</th>
+                      {OUTCOMES.map((o) => (
+                        <th key={o}>
+                          <span className="outcome-th">
+                            {getOutcomeIcon(o)} {o}
+                          </span>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stats.outcomeByShotType.map((row) => (
+                      <tr key={row.shotType}>
+                        <th scope="row">{row.shotType}</th>
+                        <td>{row.throws}</td>
+                        {OUTCOMES.map((o) => (
+                          <td key={o}>
+                            {row.throws > 0 && row.outcomeCounts[o] > 0
+                              ? `${Math.round(row.outcomeRates[o] ?? 0)}%`
+                              : '—'}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          {shotTypeData.length > 0 && (
+            <section className="chart-card">
+              <h3>Shot types</h3>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={shotTypeData} layout="vertical" margin={{ left: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e8ede9" />
+                  <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    width={100}
+                    tick={{ fontSize: 10 }}
+                  />
+                  <Tooltip />
+                  <Bar dataKey="count" name="Throws" fill="#40916c" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </section>
+          )}
 
           {stats.distanceBuckets.length > 0 && (
             <section className="chart-card">
@@ -146,64 +234,29 @@ export function StatsPanel({ data }: StatsPanelProps) {
                   <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                   <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
                   <Tooltip />
-                  <Bar dataKey="count" name="Shots" fill="#1b4332" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="count" name="Throws" fill="#1b4332" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </section>
           )}
 
-          {stats.shotTypeDistanceSuccess.length > 0 && (
-            <section className="chart-card">
-              <h3>Success rate by shot type @ distance</h3>
-              <ResponsiveContainer width="100%" height={320}>
-                <BarChart
-                  data={stats.shotTypeDistanceSuccess}
-                  layout="vertical"
-                  margin={{ left: 8, right: 10 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e8ede9" />
-                  <XAxis
-                    type="number"
-                    domain={[0, 100]}
-                    tick={{ fontSize: 11 }}
-                    tickFormatter={(v) => `${v}%`}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="label"
-                    width={150}
-                    tick={{ fontSize: 10 }}
-                  />
-                  <Tooltip />
-                  <Bar dataKey="successRate" name="Success %" fill="#2d6a4f" radius={[0, 4, 4, 0]}>
-                    <LabelList
-                      dataKey="successRate"
-                      position="right"
-                      formatter={(v) => `${Math.round(Number(v ?? 0))}%`}
-                    />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </section>
-          )}
-
-          {outcomeData.length > 0 && (
-            <section className="chart-card">
-              <h3>Outcome</h3>
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={outcomeData} layout="vertical" margin={{ left: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e8ede9" />
-                  <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
-                  <YAxis
-                    type="category"
-                    dataKey="name"
-                    width={120}
-                    tick={{ fontSize: 10 }}
-                  />
-                  <Tooltip />
-                  <Bar dataKey="count" name="Shots" fill="#52b788" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+          {stats.gamesPlayed > 0 && (
+            <section className="chart-card chart-card--secondary">
+              <h3>Competitive games</h3>
+              <div className="stat-cards stat-cards--compact">
+                <div className="stat-card stat-card--muted">
+                  <span className="stat-value">{stats.wins}</span>
+                  <span className="stat-label">Wins</span>
+                </div>
+                <div className="stat-card stat-card--muted">
+                  <span className="stat-value">{Math.round(stats.winRate)}%</span>
+                  <span className="stat-label">Win rate</span>
+                </div>
+                <div className="stat-card stat-card--muted">
+                  <span className="stat-value">{stats.gamesPlayed}</span>
+                  <span className="stat-label">Games</span>
+                </div>
+              </div>
             </section>
           )}
         </>

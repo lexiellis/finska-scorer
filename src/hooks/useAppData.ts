@@ -100,6 +100,37 @@ export function useAppData() {
     return game;
   }, [update]);
 
+  const startStatsSession = useCallback((playerIds: string[]) => {
+    if (playerIds.length < 1) return null;
+    const teams: Team[] = playerIds.map((pid) => ({
+      id: pid,
+      name: '',
+      playerIds: [pid],
+    }));
+    const scores = Object.fromEntries(teams.map((t) => [t.id, 0]));
+    const game: Game = {
+      id: createId(),
+      mode: 'stats',
+      teams,
+      scores,
+      eliminatedTeamIds: [],
+      winnerTeamId: null,
+      startedAt: new Date().toISOString(),
+      endedAt: null,
+    };
+    update((prev) => ({ ...prev, games: [...prev.games, game] }));
+    return game;
+  }, [update]);
+
+  const endStatsSession = useCallback((gameId: string) => {
+    update((prev) => ({
+      ...prev,
+      games: prev.games.map((g) =>
+        g.id === gameId ? { ...g, endedAt: new Date().toISOString() } : g,
+      ),
+    }));
+  }, [update]);
+
   const endGame = useCallback((gameId: string, winnerTeamId: string) => {
     update((prev) => ({
       ...prev,
@@ -140,8 +171,9 @@ export function useAppData() {
         const team = getTeamForPlayer(game, params.playerId);
         if (!team) return prev;
 
-        const scoreBefore = game.scores[team.id] ?? 0;
-        const isMiss = params.score === 0;
+        const isStats = game.mode === 'stats';
+        const scoreBefore = isStats ? 0 : (game.scores[team.id] ?? 0);
+        const isMiss = isMissOutcome(params.outcome, params.score);
 
         const shot: Shot = {
           id: createId(),
@@ -154,8 +186,16 @@ export function useAppData() {
           outcome: params.outcome,
           recordedAt: new Date().toISOString(),
           scoreBefore,
-          scoreAfter: isMiss ? scoreBefore : scoreBefore,
+          scoreAfter: scoreBefore,
         };
+
+        if (isStats) {
+          resultShot = shot;
+          return {
+            ...prev,
+            shots: [...prev.shots, shot],
+          };
+        }
 
         if (!isMiss) {
           const applied = applyFinskaScore(scoreBefore, params.score);
@@ -214,6 +254,14 @@ export function useAppData() {
       if (!last) return prev;
 
       const remainingShots = prev.shots.filter((s) => s.id !== last.id);
+
+      if (game.mode === 'stats') {
+        return {
+          ...prev,
+          shots: remainingShots,
+        };
+      }
+
       const state = recomputeGameState(
         { ...game, eliminatedTeamIds: [], winnerTeamId: null, endedAt: null },
         remainingShots,
@@ -254,6 +302,14 @@ export function useAppData() {
         const patchedShots = gameShots.map((s) =>
           s.id === shotId ? { ...s, ...patch } : s,
         );
+
+        if (game.mode === 'stats') {
+          return {
+            ...prev,
+            shots: [...untouchedShots, ...patchedShots],
+          };
+        }
+
         const recalculatedShots = recalculateShotScores(game, patchedShots);
         const state = recomputeGameState(game, recalculatedShots);
 
@@ -280,6 +336,8 @@ export function useAppData() {
     addPlayer,
     removePlayer,
     startGame,
+    startStatsSession,
+    endStatsSession,
     endGame,
     abandonGame,
     logShot,

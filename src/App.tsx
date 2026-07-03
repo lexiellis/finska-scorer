@@ -20,6 +20,8 @@ export default function App() {
     addPlayer,
     removePlayer,
     startGame,
+    startStatsSession,
+    endStatsSession,
     endGame,
     abandonGame,
     logShot,
@@ -46,8 +48,10 @@ export default function App() {
         {tab === 'game' && (
           <GamePanel
             data={data}
-            onStartGame={(ids) => startGame(ids)}
+            onStartGame={startGame}
+            onStartStatsSession={startStatsSession}
             onEndGame={endGame}
+            onEndStatsSession={endStatsSession}
             onAbandonGame={abandonGame}
             onLogShot={logShot}
             onUndo={undoLastShot}
@@ -57,7 +61,7 @@ export default function App() {
         {tab === 'stats' && <StatsPanel data={data} />}
         {tab === 'players' && (
           <PlayersPanel
-            players={data.players}
+            data={data}
             onAdd={addPlayer}
             onRemove={removePlayer}
           />

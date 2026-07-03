@@ -3,8 +3,12 @@ import type { Game, Outcome, Shot, Team } from './types';
 
 export const CONSECUTIVE_MISS_LIMIT = 3;
 
-export function isMissOutcome(_outcome: Outcome, score: number): boolean {
-  return score === 0;
+export function isMissOutcome(outcome: Outcome, score: number): boolean {
+  return score === 0 || outcome === 'Miss' || outcome === 'Wrong Pin';
+}
+
+export function isStatsSession(game: Game): boolean {
+  return game.mode === 'stats';
 }
 
 export function getGamePlayerIds(game: Game): string[] {
@@ -83,6 +87,18 @@ export function recomputeGameState(game: Game, shots: Shot[]): RecomputedGameSta
   const scores = Object.fromEntries(game.teams.map((t) => [t.id, 0]));
   const missStreaks = Object.fromEntries(game.teams.map((t) => [t.id, 0]));
   const eliminated = new Set<string>(game.eliminatedTeamIds);
+
+  if (isStatsSession(game)) {
+    return {
+      scores,
+      missStreaks,
+      eliminatedTeamIds: [],
+      winnerTeamId: null,
+      endReason: null,
+      isEnded: false,
+    };
+  }
+
   let winnerTeamId: string | null = null;
   let endReason: GameEndReason = null;
 

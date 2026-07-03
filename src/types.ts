@@ -13,7 +13,7 @@ export const SHOT_TYPES = [
 
 export type ShotType = (typeof SHOT_TYPES)[number];
 
-export const DISTANCES = [4, 5, 6, 7, '9+'] as const;
+export const DISTANCES = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, '12+'] as const;
 
 export type Distance = (typeof DISTANCES)[number];
 
@@ -21,13 +21,16 @@ export const OUTCOMES = [
   'Intended',
   'So-so',
   'Unintended',
+  'Miss',
+  'Wrong Pin',
+  'Collateral',
 ] as const;
 
 export type Outcome = (typeof OUTCOMES)[number];
 
 export type Tab = 'game' | 'stats' | 'players';
 
-export type GameMode = 'game';
+export type GameMode = 'game' | 'stats';
 
 export interface Player {
   id: string;

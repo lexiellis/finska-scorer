@@ -1,13 +1,15 @@
 import { useState } from 'react';
-import type { Player } from '../types';
+import type { AppData } from '../types';
+import { getPlayerThrowCount } from '../stats';
 
 interface PlayersPanelProps {
-  players: Player[];
+  data: AppData;
   onAdd: (name: string) => void;
   onRemove: (id: string) => void;
 }
 
-export function PlayersPanel({ players, onAdd, onRemove }: PlayersPanelProps) {
+export function PlayersPanel({ data, onAdd, onRemove }: PlayersPanelProps) {
+  const { players } = data;
   const [name, setName] = useState('');
 
   const handleAdd = () => {
@@ -51,7 +53,12 @@ export function PlayersPanel({ players, onAdd, onRemove }: PlayersPanelProps) {
         <ul className="player-list">
           {players.map((p) => (
             <li key={p.id} className="player-row">
-              <span className="player-name">{p.name}</span>
+              <span className="player-name">
+                {p.name}
+                <span className="player-throws">
+                  {getPlayerThrowCount(data, p.id)} throws
+                </span>
+              </span>
               <button
                 type="button"
                 className="btn ghost danger"
