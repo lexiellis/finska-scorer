@@ -128,7 +128,7 @@ export function ShotLogForm({
       <div className="log-fields">
         <section className="log-section log-section--type">
           <h3 className="log-section-title">Shot type</h3>
-          <div className="btn-grid cols-4">
+          <div className="btn-grid cols-5">
             {SHOT_TYPES.map((t) => (
               <button
                 key={t}
