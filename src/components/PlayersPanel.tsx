@@ -1,26 +1,58 @@
 import { useState } from 'react';
 import type { AppData } from '../types';
-import type { StorageMode } from '../storage';
+import type { SyncStatus } from '../storage';
 import { getPlayerThrowCount } from '../stats';
 
 interface PlayersPanelProps {
   data: AppData;
-  storageMode: StorageMode;
+  syncStatus: SyncStatus;
   onAdd: (name: string) => void;
   onRemove: (id: string) => void;
   onImportCsv: (csvText: string) => string;
   onResetToImportedLog: () => Promise<string>;
 }
 
+function syncStatusClass(sync: SyncStatus): string {
+  if (sync.error || sync.lastSaveOk === false) return 'storage-status--error';
+  if (sync.mode === 'supabase' && sync.lastSaveOk) return 'storage-status--ok';
+  if (sync.mode === 'supabase') return 'storage-status--supabase';
+  return 'storage-status--local';
+}
+
+function syncStatusMessage(sync: SyncStatus, playerCount: number, shotCount: number): string {
+  if (sync.mode === 'local') {
+    return 'Storage: this device only (browser localStorage). Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY on Vercel, then redeploy, to use your app_state table.';
+  }
+
+  if (sync.error) {
+    return `Supabase sync error: ${sync.error}. Run the SQL in supabase/schema.sql (RLS policies for anon read/write).`;
+  }
+
+  if (sync.lastSaveOk === false) {
+    return 'Could not save to Supabase. Check that row-level security policies allow anon insert/update on app_state.';
+  }
+
+  const summary = `${playerCount} players, ${shotCount} throws`;
+  if (sync.lastSaveOk) {
+    return `Supabase sync active — app_state row id "global" (${summary}).`;
+  }
+
+  if (sync.remoteRowFound === false) {
+    return `Supabase connected — no row yet; saving ${summary} on first load…`;
+  }
+
+  return `Supabase connected — loading shared data…`;
+}
+
 export function PlayersPanel({
   data,
-  storageMode,
+  syncStatus,
   onAdd,
   onRemove,
   onImportCsv,
   onResetToImportedLog,
 }: PlayersPanelProps) {
-  const { players } = data;
+  const { players, shots } = data;
   const [name, setName] = useState('');
   const [importMessage, setImportMessage] = useState('');
   const [resetting, setResetting] = useState(false);
@@ -32,18 +64,16 @@ export function PlayersPanel({
     setName('');
   };
 
-  const storageLabel =
-    storageMode === 'supabase'
-      ? 'Shared sync (Supabase) — all devices see the same data'
-      : 'This device only (browser localStorage) — set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY on Vercel to sync';
-
   return (
     <div className="panel">
       <header className="panel-header">
         <h2>Players</h2>
       </header>
 
-      <p className={`storage-status storage-status--${storageMode}`}>{storageLabel}</p>
+      <div className={`storage-status ${syncStatusClass(syncStatus)}`} role="status">
+        <strong>Data storage</strong>
+        <p>{syncStatusMessage(syncStatus, players.length, shots.length)}</p>
+      </div>
 
       <form
         className="add-row"

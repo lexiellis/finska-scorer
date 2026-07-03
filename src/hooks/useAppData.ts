@@ -4,13 +4,14 @@ import { applyFinskaScore } from '../scoring';
 import {
   clearLocalAppData,
   createId,
-  getStorageMode,
+  initialSyncStatus,
   isRemoteStorageConfigured,
   loadData,
   loadRemoteData,
   saveData,
   setImportDataVersion,
   getImportDataVersion,
+  type SyncStatus,
 } from '../storage';
 import {
   getTeamForPlayer,
@@ -40,7 +41,7 @@ function recalculateShotScores(game: Game, shots: Shot[]): Shot[] {
 export function useAppData() {
   const [data, setData] = useState<AppData>(loadData);
   const [isHydrated, setIsHydrated] = useState(false);
-  const [storageMode] = useState(getStorageMode);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>(initialSyncStatus);
 
   useEffect(() => {
     let isCancelled = false;
@@ -48,15 +49,26 @@ export function useAppData() {
     async function hydrate() {
       const needsFreshImport = getImportDataVersion() !== IMPORT_DATA_VERSION;
       let loaded: AppData = { players: [], games: [], shots: [] };
+      let nextSync = initialSyncStatus();
 
       if (!needsFreshImport) {
         loaded = loadData();
         if (isRemoteStorageConfigured()) {
-          const remoteData = await loadRemoteData();
-          if (remoteData) loaded = remoteData;
+          const remote = await loadRemoteData();
+          if (remote.status === 'ok') {
+            loaded = remote.data;
+            nextSync = { ...nextSync, remoteRowFound: true };
+          } else if (remote.status === 'empty') {
+            nextSync = { ...nextSync, remoteRowFound: false };
+          } else if (remote.status === 'error') {
+            nextSync = { ...nextSync, error: remote.message };
+          }
         }
       } else {
         clearLocalAppData();
+        if (isRemoteStorageConfigured()) {
+          nextSync = { ...nextSync, remoteRowFound: false };
+        }
       }
 
       const imported = await importBundledMolkkyLog(loaded, {
@@ -68,6 +80,7 @@ export function useAppData() {
         setImportDataVersion(IMPORT_DATA_VERSION);
       }
 
+      setSyncStatus(nextSync);
       setData(imported.data);
       setIsHydrated(true);
     }
@@ -80,7 +93,15 @@ export function useAppData() {
 
   useEffect(() => {
     if (!isHydrated) return;
-    void saveData(data);
+    void saveData(data).then((result) => {
+      if ('skipped' in result && result.skipped) return;
+      setSyncStatus((prev) => ({
+        ...prev,
+        lastSaveOk: result.ok,
+        error: result.ok ? prev.error : result.message,
+        remoteRowFound: result.ok ? true : prev.remoteRowFound,
+      }));
+    });
   }, [data, isHydrated]);
 
   const update = useCallback((fn: (prev: AppData) => AppData) => {
@@ -389,6 +410,6 @@ export function useAppData() {
     updateShot,
     importCsvLog,
     resetToImportedLog,
-    storageMode,
+    syncStatus,
   };
 }

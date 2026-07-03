@@ -114,8 +114,35 @@ export function isRemoteStorageConfigured(): boolean {
 
 export type StorageMode = 'supabase' | 'local';
 
+export type RemoteLoadResult =
+  | { status: 'ok'; data: AppData }
+  | { status: 'empty' }
+  | { status: 'error'; message: string }
+  | { status: 'disabled' };
+
+export type SaveResult =
+  | { ok: true }
+  | { ok: false; message: string }
+  | { ok: true; skipped: true };
+
+export interface SyncStatus {
+  mode: StorageMode;
+  remoteRowFound: boolean | null;
+  lastSaveOk: boolean | null;
+  error: string | null;
+}
+
 export function getStorageMode(): StorageMode {
   return isRemoteStorageConfigured() ? 'supabase' : 'local';
+}
+
+export function initialSyncStatus(): SyncStatus {
+  return {
+    mode: getStorageMode(),
+    remoteRowFound: null,
+    lastSaveOk: null,
+    error: null,
+  };
 }
 
 export function getImportDataVersion(): string | null {
@@ -157,10 +184,10 @@ export function loadData(): AppData {
   }
 }
 
-export async function loadRemoteData(): Promise<AppData | null> {
+export async function loadRemoteData(): Promise<RemoteLoadResult> {
   if (!supabase) {
     warnIfRemoteStorageDisabled();
-    return null;
+    return { status: 'disabled' };
   }
 
   const { data, error } = await supabase
@@ -170,30 +197,41 @@ export async function loadRemoteData(): Promise<AppData | null> {
     .maybeSingle<SupabaseStateRow>();
 
   if (error) {
-    console.error('Failed to load shared app data from Supabase:', error.message);
-    return null;
+    const message = error.message;
+    console.error('Failed to load shared app data from Supabase:', message);
+    return { status: 'error', message };
   }
 
-  if (!data?.data) return null;
+  if (!data?.data) return { status: 'empty' };
+
   const migrated = migrate({ ...emptyData(), ...data.data });
   localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
-  return migrated;
+  return { status: 'ok', data: migrated };
 }
 
-export async function saveData(data: AppData): Promise<void> {
+export async function saveData(data: AppData): Promise<SaveResult> {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   if (!supabase) {
     warnIfRemoteStorageDisabled();
-    return;
+    return { ok: true, skipped: true };
   }
 
-  const { error } = await supabase
-    .from(SUPABASE_TABLE)
-    .upsert({ id: SHARED_STATE_ID, data }, { onConflict: 'id' });
+  const { error } = await supabase.from(SUPABASE_TABLE).upsert(
+    {
+      id: SHARED_STATE_ID,
+      data,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'id' },
+  );
 
   if (error) {
-    console.error('Failed to save shared app data to Supabase:', error.message);
+    const message = error.message;
+    console.error('Failed to save shared app data to Supabase:', message);
+    return { ok: false, message };
   }
+
+  return { ok: true };
 }
 
 /** Works on LAN HTTP (phones) where crypto.randomUUID is unavailable. */
