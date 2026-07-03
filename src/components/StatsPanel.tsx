@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   Bar,
   BarChart,
@@ -36,9 +36,100 @@ function formatRate(rate: number | null): string {
   return `${Math.round(rate)}%`;
 }
 
+type RateView = 'success' | 'soso';
+
+type RateChartRow = {
+  label?: string;
+  name?: string;
+  throws?: number;
+  attempts?: number;
+  successRate: number;
+  sosoOnlyRate: number;
+};
+
+function RateTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: Array<{ name?: string; value?: number; payload?: RateChartRow }>;
+  label?: string;
+}): ReactNode {
+  if (!active || !payload?.length) return null;
+  const row = payload[0]?.payload;
+  if (!row) return null;
+
+  const count = row.attempts ?? row.throws ?? 0;
+  const heading = label ?? row.label ?? row.name ?? '';
+
+  return (
+    <div className="chart-tooltip">
+      <p className="chart-tooltip-label">{heading}</p>
+      <p className="chart-tooltip-throws">{count} throws</p>
+      {payload.map((entry) => (
+        <p key={String(entry.name)} className="chart-tooltip-rate">
+          {entry.name}: {Math.round(Number(entry.value ?? 0))}%
+        </p>
+      ))}
+    </div>
+  );
+}
+
+function OutcomeRateBars({
+  rateView,
+  stackId = 'rates',
+}: {
+  rateView: RateView;
+  stackId?: string;
+}) {
+  if (rateView === 'success') {
+    return (
+      <Bar
+        dataKey="successRate"
+        name="Intended"
+        fill={CHART.secondary}
+        radius={[4, 4, 0, 0]}
+      />
+    );
+  }
+
+  return (
+    <>
+      <Bar stackId={stackId} dataKey="sosoOnlyRate" name="So-so" fill={CHART.tertiary} />
+      <Bar
+        stackId={stackId}
+        dataKey="successRate"
+        name="Intended"
+        fill={CHART.secondary}
+        radius={[4, 4, 0, 0]}
+      />
+    </>
+  );
+}
+
+function toRateRow(point: {
+  label?: string;
+  name?: string;
+  attempts?: number;
+  throws?: number;
+  successRate: number | null;
+  sosoOnlyRate: number | null;
+}): RateChartRow {
+  return {
+    label: point.label,
+    name: point.name,
+    attempts: point.attempts,
+    throws: point.throws,
+    successRate: point.successRate ?? 0,
+    sosoOnlyRate: point.sosoOnlyRate ?? 0,
+  };
+}
+
 export function StatsPanel({ data }: StatsPanelProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedShotType, setSelectedShotType] = useState<ShotType | 'ALL'>('ALL');
+  const [rateView, setRateView] = useState<RateView>('success');
 
   useEffect(() => {
     if (selectedId !== null && !data.players.some((p) => p.id === selectedId)) {
@@ -75,12 +166,12 @@ export function StatsPanel({ data }: StatsPanelProps) {
 
   const overview = data.players.map((p) => {
     const s = computePlayerStats(data, p.id)!;
-    return {
+    return toRateRow({
       name: p.name,
       throws: s.totalShots,
-      successRate: Math.round(s.successRate),
-      sosoPlusRate: Math.round(s.sosoPlusRate),
-    };
+      successRate: s.successRate,
+      sosoOnlyRate: s.sosoOnlyRate,
+    });
   });
 
   const shotTypeData = stats
@@ -117,18 +208,35 @@ export function StatsPanel({ data }: StatsPanelProps) {
         ))}
       </div>
 
-      {overview.some((o) => o.throws > 0) && (
+      {stats && stats.totalShots > 0 && (
+        <div className="player-chips rate-view-chips">
+          <button
+            type="button"
+            className={`chip ${rateView === 'success' ? 'selected' : ''}`}
+            onClick={() => setRateView('success')}
+          >
+            Success
+          </button>
+          <button
+            type="button"
+            className={`chip ${rateView === 'soso' ? 'selected' : ''}`}
+            onClick={() => setRateView('soso')}
+          >
+            Soso+
+          </button>
+        </div>
+      )}
+
+      {selectedId === null && overview.some((o) => (o.throws ?? 0) > 0) && (
         <section className="chart-card">
           <h3>All players</h3>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={overview} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={CHART.grid} />
               <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip />
-              <Bar dataKey="throws" name="Throws" fill={CHART.primary} radius={[4, 4, 0, 0]} />
-              <Bar dataKey="successRate" name="Success %" fill={CHART.secondary} radius={[4, 4, 0, 0]} />
-              <Bar dataKey="sosoPlusRate" name="Soso+ %" fill={CHART.tertiary} radius={[4, 4, 0, 0]} />
+              <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} unit="%" />
+              <Tooltip content={<RateTooltip />} />
+              <OutcomeRateBars rateView={rateView} stackId="players" />
             </BarChart>
           </ResponsiveContainer>
         </section>
@@ -172,32 +280,21 @@ export function StatsPanel({ data }: StatsPanelProps) {
               {distanceRateSeries.length > 0 ? (
                 <ResponsiveContainer width="100%" height={220}>
                   <BarChart
-                    data={distanceRateSeries.map((point) => ({
-                      label: point.label,
-                      successRate: point.successRate ?? 0,
-                      sosoPlusRate: point.sosoPlusRate ?? 0,
-                      attempts: point.attempts,
-                    }))}
+                    data={distanceRateSeries.map((point) =>
+                      toRateRow({
+                        label: point.label,
+                        attempts: point.attempts,
+                        successRate: point.successRate,
+                        sosoOnlyRate: point.sosoOnlyRate,
+                      }),
+                    )}
                     margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke={CHART.grid} />
                     <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                     <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} unit="%" />
-                    <Tooltip
-                      formatter={(value) => [`${Math.round(Number(value ?? 0))}%`, undefined]}
-                    />
-                    <Bar
-                      dataKey="successRate"
-                      name="Success %"
-                      fill={CHART.secondary}
-                      radius={[4, 4, 0, 0]}
-                    />
-                    <Bar
-                      dataKey="sosoPlusRate"
-                      name="Soso+ %"
-                      fill={CHART.tertiary}
-                      radius={[4, 4, 0, 0]}
-                    />
+                    <Tooltip content={<RateTooltip />} />
+                    <OutcomeRateBars rateView={rateView} stackId="distance" />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (

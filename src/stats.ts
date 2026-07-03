@@ -19,6 +19,10 @@ export function isSosoPlusOutcome(shot: Shot): boolean {
   return shot.outcome === 'Intended' || shot.outcome === 'So-so';
 }
 
+export function isSosoOnlyOutcome(shot: Shot): boolean {
+  return shot.outcome === 'So-so';
+}
+
 export interface PlayerStats {
   player: Player;
   gamesPlayed: number;
@@ -29,6 +33,8 @@ export interface PlayerStats {
   avgScorePerShot: number;
   /** Intended outcome / all throws */
   successRate: number;
+  /** So-so only / all throws */
+  sosoOnlyRate: number;
   /** Intended + So-so / all throws */
   sosoPlusRate: number;
   shotTypeCounts: Record<ShotType, number>;
@@ -48,6 +54,7 @@ export interface DistanceRatePoint {
   distance: string;
   attempts: number;
   successRate: number | null;
+  sosoOnlyRate: number | null;
   sosoPlusRate: number | null;
 }
 
@@ -153,6 +160,7 @@ function buildDistanceRatesForShots(shots: Shot[]): DistanceRatePoint[] {
       distance,
       attempts,
       successRate: outcomeRate(cellShots, isIntendedOutcome),
+      sosoOnlyRate: outcomeRate(cellShots, isSosoOnlyOutcome),
       sosoPlusRate: outcomeRate(cellShots, isSosoPlusOutcome),
     };
   }).filter((point) => point.attempts > 0);
@@ -226,6 +234,7 @@ function computeStatsFromShots(data: AppData, player: Player, shots: Shot[]): Pl
   const distanceMap = new Map<string, number>();
   const scoreMap = new Map<number, number>();
   let intendedShots = 0;
+  let sosoOnlyShots = 0;
   let sosoPlusShots = 0;
   let twelveShots = 0;
   let currentScoringStreak = 0;
@@ -256,6 +265,9 @@ function computeStatsFromShots(data: AppData, player: Player, shots: Shot[]): Pl
     if (isSosoPlusOutcome(shot)) {
       sosoPlusShots += 1;
     }
+    if (isSosoOnlyOutcome(shot)) {
+      sosoOnlyShots += 1;
+    }
     if (shot.score === 12) {
       twelveShots += 1;
     }
@@ -279,6 +291,7 @@ function computeStatsFromShots(data: AppData, player: Player, shots: Shot[]): Pl
     totalPoints,
     avgScorePerShot: scoredShotCount > 0 ? totalPoints / scoredShotCount : 0,
     successRate: shots.length > 0 ? (intendedShots / shots.length) * 100 : 0,
+    sosoOnlyRate: shots.length > 0 ? (sosoOnlyShots / shots.length) * 100 : 0,
     sosoPlusRate: shots.length > 0 ? (sosoPlusShots / shots.length) * 100 : 0,
     shotTypeCounts,
     outcomeCounts,

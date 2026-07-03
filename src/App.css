@@ -2230,6 +2230,38 @@
   margin-bottom: 0.65rem;
 }
 
+.rate-view-chips {
+  margin-bottom: 0.35rem;
+}
+
+.chart-tooltip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.55rem 0.7rem;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  box-shadow: var(--shadow-sm);
+}
+
+.chart-tooltip p {
+  margin: 0;
+}
+
+.chart-tooltip-label {
+  font-weight: 800;
+  margin-bottom: 0.2rem !important;
+}
+
+.chart-tooltip-throws {
+  color: var(--text-muted);
+  margin-bottom: 0.25rem !important;
+}
+
+.chart-tooltip-rate {
+  color: var(--text);
+}
+
 .stat-cards--compact {
   display: flex;
   gap: 0.5rem;
