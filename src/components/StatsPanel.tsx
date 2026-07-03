@@ -24,6 +24,13 @@ function heatmapCellClass(rate: number | null): string {
   return 'heatmap-cell heatmap-cell--low';
 }
 
+const CHART = {
+  grid: '#ebe8e2',
+  primary: '#3d5c4a',
+  secondary: '#6d8f78',
+  tertiary: '#9bb5a4',
+} as const;
+
 function formatRate(rate: number | null): string {
   if (rate === null) return '—';
   return `${Math.round(rate)}%`;
@@ -91,12 +98,12 @@ export function StatsPanel({ data }: StatsPanelProps) {
           <h3>All players</h3>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={overview} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e8ede9" />
+              <CartesianGrid strokeDasharray="3 3" stroke={CHART.grid} />
               <XAxis dataKey="name" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} />
               <Tooltip />
-              <Bar dataKey="throws" name="Throws" fill="#1b4332" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="hitRate" name="Hit %" fill="#2d6a4f" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="throws" name="Throws" fill={CHART.primary} radius={[4, 4, 0, 0]} />
+              <Bar dataKey="hitRate" name="Hit %" fill={CHART.secondary} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </section>
@@ -210,7 +217,7 @@ export function StatsPanel({ data }: StatsPanelProps) {
               <h3>Shot types</h3>
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={shotTypeData} layout="vertical" margin={{ left: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e8ede9" />
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART.grid} />
                   <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
                   <YAxis
                     type="category"
@@ -219,7 +226,7 @@ export function StatsPanel({ data }: StatsPanelProps) {
                     tick={{ fontSize: 10 }}
                   />
                   <Tooltip />
-                  <Bar dataKey="count" name="Throws" fill="#40916c" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="count" name="Throws" fill={CHART.tertiary} radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </section>
@@ -230,11 +237,11 @@ export function StatsPanel({ data }: StatsPanelProps) {
               <h3>Distance</h3>
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={stats.distanceBuckets}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e8ede9" />
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART.grid} />
                   <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                   <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
                   <Tooltip />
-                  <Bar dataKey="count" name="Throws" fill="#1b4332" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="count" name="Throws" fill={CHART.primary} radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </section>
