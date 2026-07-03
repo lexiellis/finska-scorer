@@ -265,7 +265,7 @@ export function ScoreBoard({
     <div className="score-board-expanded">
       <div className="score-board-expanded-layout">
         <div className="score-board-row-gutter">
-          <span className="score-board-gutter-head">#</span>
+          <span className="score-board-gutter-head" aria-hidden />
           {Array.from({ length: rowCount }, (_, rowIndex) => (
             <span key={rowIndex} className="score-board-gutter-row">
               {rowIndex + 1}
