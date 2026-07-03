@@ -46,7 +46,7 @@ export function SessionSetup({
       {mode === 'stats' ? (
         <>
           <p className="session-hint">
-            Pick who&apos;s throwing. Log every shot — no scoring or elimination rules.
+            Pick who&apos;s throwing. Log every throw - no game scoring. Can be used for solo play.
           </p>
           <div className="player-chips">
             {players.map((p) => (
