@@ -72,9 +72,8 @@
 }
 
 .tab-btn.active {
-  background: var(--primary);
-  color: #fff;
-  box-shadow: 0 0 0 2px rgba(45, 106, 79, 0.2);
+  background: var(--selected-bg);
+  color: var(--primary);
 }
 
 .app-main--log {
@@ -355,9 +354,8 @@
 
 .player-pill.selected {
   border-color: var(--primary);
-  background: var(--primary);
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(45, 106, 79, 0.25);
+  background: var(--selected-bg);
+  color: var(--primary);
 }
 
 .log-fields {
@@ -461,13 +459,8 @@
 
 .pick-btn.selected {
   border-color: var(--primary);
-  border-width: 3px;
-  background: var(--primary);
-  color: #fff;
-  box-shadow:
-    0 0 0 3px rgba(45, 106, 79, 0.3),
-    0 3px 10px rgba(27, 67, 50, 0.28);
-  transform: scale(1.03);
+  background: var(--selected-bg);
+  color: var(--primary);
 }
 
 .shot-log .score-grid {
@@ -504,14 +497,9 @@
 }
 
 .shot-log .score-btn.selected {
-  border-color: #fff;
-  border-width: 3px;
-  background: var(--primary);
-  color: #fff;
-  box-shadow:
-    0 0 0 3px rgba(45, 106, 79, 0.45),
-    0 4px 14px rgba(27, 67, 50, 0.35);
-  transform: scale(1.06);
+  border-color: var(--primary);
+  background: var(--selected-bg);
+  color: var(--primary);
 }
 
 /* 0–4 row 1 (1 spans 2 rows in col 1); 5–8 row 2 from col 2; 9–12 row 3 from col 2 */
@@ -898,9 +886,8 @@
 
 .score-circle.selected {
   border-color: var(--primary);
-  background: var(--primary);
-  color: #fff;
-  transform: scale(1.05);
+  background: var(--selected-bg);
+  color: var(--primary);
 }
 
 .score-circle:active {
@@ -933,11 +920,13 @@
 
 .chip.selected {
   border-color: var(--primary);
-  border-width: 3px;
-  background: var(--primary);
-  color: #fff;
-  box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.28);
-  transform: scale(1.03);
+  background: var(--selected-bg);
+  color: var(--primary);
+}
+
+.chip.selected .chip-score {
+  background: rgba(45, 106, 79, 0.12);
+  color: var(--primary);
 }
 
 .chip.selected-outline {
@@ -954,7 +943,7 @@
 }
 
 .chip:not(.selected) .chip-score {
-  background: var(--bg);
+  background: #f0f4f1;
   color: var(--text-muted);
 }
 
@@ -1966,11 +1955,8 @@
 
 .mode-btn.selected {
   border-color: var(--primary);
-  border-width: 3px;
-  background: var(--primary);
-  color: #fff;
-  box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.28);
-  transform: scale(1.02);
+  background: var(--selected-bg);
+  color: var(--primary);
 }
 
 .session-hint {
@@ -2076,12 +2062,4 @@
 .chart-card--secondary h3 {
   font-size: 0.95rem;
   color: var(--text-muted);
-}
-
-.option-btn.selected {
-  border-color: var(--primary);
-  border-width: 3px;
-  background: var(--primary);
-  color: #fff;
-  box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.3);
 }
