@@ -1,4 +1,5 @@
 :root {
+  --app-bg: #faf6eb;
   --bg: #ffffff;
   --surface: #ffffff;
   --selected-bg: #e8f5e9;
@@ -23,7 +24,7 @@
   line-height: 1.5;
   font-weight: 400;
   color: var(--text);
-  background: var(--bg);
+  background: #ffffff;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -47,6 +48,11 @@ body,
 
 body {
   overflow: hidden;
+  background: #ffffff;
+}
+
+#root {
+  background: #ffffff;
 }
 
 button,
