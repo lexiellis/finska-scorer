@@ -8,7 +8,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { computePlayerStats, getPlayerThrowCount } from '../stats';
+import { computeAllPlayersStats, computePlayerStats, getPlayerThrowCount } from '../stats';
 import type { AppData } from '../types';
 import { OUTCOMES, SHOT_TYPES } from '../types';
 import { getOutcomeIcon } from '../outcomeDisplay';
@@ -37,13 +37,11 @@ function formatRate(rate: number | null): string {
 }
 
 export function StatsPanel({ data }: StatsPanelProps) {
-  const [selectedId, setSelectedId] = useState<string | null>(
-    data.players[0]?.id ?? null,
-  );
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (selectedId && !data.players.some((p) => p.id === selectedId)) {
-      setSelectedId(data.players[0]?.id ?? null);
+    if (selectedId !== null && !data.players.some((p) => p.id === selectedId)) {
+      setSelectedId(null);
     }
   }, [data.players, selectedId]);
 
@@ -55,7 +53,10 @@ export function StatsPanel({ data }: StatsPanelProps) {
     );
   }
 
-  const stats = selectedId ? computePlayerStats(data, selectedId) : null;
+  const stats =
+    selectedId === null
+      ? computeAllPlayersStats(data)
+      : computePlayerStats(data, selectedId);
 
   const overview = data.players.map((p) => {
     const s = computePlayerStats(data, p.id)!;
@@ -80,6 +81,14 @@ export function StatsPanel({ data }: StatsPanelProps) {
       </header>
 
       <div className="player-chips">
+        <button
+          type="button"
+          className={`chip ${selectedId === null ? 'selected' : ''}`}
+          onClick={() => setSelectedId(null)}
+        >
+          All
+          <span className="chip-score">{data.shots.length}</span>
+        </button>
         {data.players.map((p) => (
           <button
             key={p.id}
@@ -119,14 +128,6 @@ export function StatsPanel({ data }: StatsPanelProps) {
             <div className="stat-card">
               <span className="stat-value">{Math.round(stats.hitRate)}%</span>
               <span className="stat-label">Hit rate</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-value">{stats.avgScorePerShot.toFixed(1)}</span>
-              <span className="stat-label">Avg pins/throw</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-value">{Math.round(stats.twelveRate)}%</span>
-              <span className="stat-label">12-pin rate</span>
             </div>
           </div>
 
@@ -268,7 +269,7 @@ export function StatsPanel({ data }: StatsPanelProps) {
           )}
         </>
       ) : (
-        <p className="empty-state">No shots logged for this player yet.</p>
+        <p className="empty-state">No shots logged yet.</p>
       )}
     </div>
   );

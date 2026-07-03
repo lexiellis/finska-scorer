@@ -60,6 +60,16 @@ function initOutcomeCounts(): Record<Outcome, number> {
 
 const DISTANCE_KEYS = DISTANCES.map((d) => (typeof d === 'string' ? d : String(d)));
 
+function distanceSortIndex(label: string): number {
+  if (label.endsWith('+')) return 100;
+  const n = Number(label.replace(/m$/i, ''));
+  return Number.isFinite(n) ? n : 101;
+}
+
+function sortDistanceLabels(a: string, b: string): number {
+  return distanceSortIndex(a) - distanceSortIndex(b);
+}
+
 export function getPlayerShots(data: AppData, playerId: string): Shot[] {
   return data.shots.filter((s) => s.playerId === playerId);
 }
@@ -129,19 +139,35 @@ function buildOutcomeByShotType(shots: Shot[]): OutcomeByTypeRow[] {
 export function computePlayerStats(data: AppData, playerId: string): PlayerStats | null {
   const player = data.players.find((p) => p.id === playerId);
   if (!player) return null;
+  return computeStatsFromShots(data, player, getPlayerShots(data, playerId));
+}
 
-  const shots = getPlayerShots(data, playerId);
+export function computeAllPlayersStats(data: AppData): PlayerStats | null {
+  if (data.players.length === 0) return null;
+  const player: Player = {
+    id: '__all__',
+    name: 'All players',
+    createdAt: '',
+  };
+  return computeStatsFromShots(data, player, data.shots);
+}
+
+function computeStatsFromShots(data: AppData, player: Player, shots: Shot[]): PlayerStats {
   const competitiveGames = data.games.filter(
     (g) => g.mode === 'game' && g.endedAt !== null,
   );
-  const gamesPlayed = competitiveGames.filter((g) =>
-    getGamePlayerIds(g).includes(playerId),
-  ).length;
-  const wins = competitiveGames.filter((g) => {
-    if (!g.winnerTeamId) return false;
-    const team = g.teams.find((t) => t.id === g.winnerTeamId);
-    return team?.playerIds.includes(playerId) ?? false;
-  }).length;
+  const playerId = player.id;
+  const isAggregate = playerId === '__all__';
+  const gamesPlayed = isAggregate
+    ? 0
+    : competitiveGames.filter((g) => getGamePlayerIds(g).includes(playerId)).length;
+  const wins = isAggregate
+    ? 0
+    : competitiveGames.filter((g) => {
+        if (!g.winnerTeamId) return false;
+        const team = g.teams.find((t) => t.id === g.winnerTeamId);
+        return team?.playerIds.includes(playerId) ?? false;
+      }).length;
   const shotTypeCounts = initShotTypeCounts();
   const outcomeCounts = initOutcomeCounts();
   const distanceMap = new Map<string, number>();
@@ -180,11 +206,7 @@ export function computePlayerStats(data: AppData, playerId: string): PlayerStats
 
   const distanceBuckets = [...distanceMap.entries()]
     .map(([label, count]) => ({ label: label.endsWith('+') ? label : `${label}m`, count }))
-    .sort((a, b) => {
-      if (a.label.endsWith('+')) return 1;
-      if (b.label.endsWith('+')) return -1;
-      return Number(a.label) - Number(b.label);
-    });
+    .sort((a, b) => sortDistanceLabels(a.label, b.label));
 
   const scoreDistribution = Array.from({ length: 13 }, (_, score) => ({
     score,
