@@ -13,7 +13,7 @@
   align-items: baseline;
   justify-content: flex-start;
   gap: 0.65rem;
-  padding: 1rem 1.25rem 0.5rem;
+  padding: 0.5rem 1.25rem;
   background: linear-gradient(135deg, var(--header-from) 0%, var(--header-to) 100%);
   color: var(--text-on-dark);
 }
