@@ -3,7 +3,10 @@ import type { Game, Outcome, Shot, Team } from './types';
 
 export const CONSECUTIVE_MISS_LIMIT = 3;
 
-export function isMissOutcome(outcome: Outcome, score: number): boolean {
+export function isMissOutcome(outcome: Outcome, score: number | null): boolean {
+  if (score === null) {
+    return outcome === 'Miss' || outcome === 'Wrong Pin';
+  }
   return score === 0 || outcome === 'Miss' || outcome === 'Wrong Pin';
 }
 
@@ -110,7 +113,7 @@ export function recomputeGameState(game: Game, shots: Shot[]): RecomputedGameSta
     const teamId = shot.teamId;
     if (!teamId || eliminated.has(teamId)) continue;
 
-    if (isMissOutcome(shot.outcome, shot.score)) {
+    if (isMissOutcome(shot.outcome, shot.score) || shot.score === null) {
       const streak = (missStreaks[teamId] ?? 0) + 1;
       missStreaks[teamId] = streak;
       if (streak >= CONSECUTIVE_MISS_LIMIT) {
@@ -120,7 +123,8 @@ export function recomputeGameState(game: Game, shots: Shot[]): RecomputedGameSta
     } else {
       missStreaks[teamId] = 0;
       const before = scores[teamId] ?? 0;
-      const { newScore, event } = applyFinskaScore(before, shot.score);
+      const pins = shot.score ?? 0;
+      const { newScore, event } = applyFinskaScore(before, pins);
       scores[teamId] = newScore;
       if (event === 'win') {
         winnerTeamId = teamId;

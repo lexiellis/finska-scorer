@@ -2,6 +2,7 @@ import type { AppData, Distance, Game, Outcome, Player } from './types';
 import { createClient } from '@supabase/supabase-js';
 
 const STORAGE_KEY = 'finska-scorer-data';
+const IMPORT_VERSION_KEY = 'finska-import-version';
 const SHARED_STATE_ID = 'global';
 const SUPABASE_TABLE = 'app_state';
 
@@ -78,7 +79,8 @@ function migrate(data: AppData): AppData {
       ...s,
       teamId: s.teamId ?? s.playerId,
       scoreBefore: s.scoreBefore ?? 0,
-      scoreAfter: s.scoreAfter ?? s.score,
+      scoreAfter: s.scoreAfter ?? (s.score ?? 0),
+      score: typeof s.score === 'number' ? s.score : null,
       distance: migrateDistance(s.distance as Distance | '9+'),
       outcome: migrateOutcome(s.outcome as string),
     })),
@@ -108,6 +110,29 @@ let warnedMissingSupabaseConfig = false;
 
 export function isRemoteStorageConfigured(): boolean {
   return Boolean(supabase);
+}
+
+export type StorageMode = 'supabase' | 'local';
+
+export function getStorageMode(): StorageMode {
+  return isRemoteStorageConfigured() ? 'supabase' : 'local';
+}
+
+export function getImportDataVersion(): string | null {
+  try {
+    return localStorage.getItem(IMPORT_VERSION_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setImportDataVersion(version: string): void {
+  localStorage.setItem(IMPORT_VERSION_KEY, version);
+}
+
+export function clearLocalAppData(): void {
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(IMPORT_VERSION_KEY);
 }
 
 function warnIfRemoteStorageDisabled() {

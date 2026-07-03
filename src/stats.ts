@@ -7,7 +7,8 @@ export function formatDistanceLabel(distance: Distance): string {
 }
 
 export function isHitShot(shot: Shot): boolean {
-  return shot.score > 0;
+  if (shot.score !== null) return shot.score > 0;
+  return shot.outcome !== 'Miss' && shot.outcome !== 'Wrong Pin';
 }
 
 export interface PlayerStats {
@@ -151,13 +152,19 @@ export function computePlayerStats(data: AppData, playerId: string): PlayerStats
   let bestScoringStreak = 0;
 
   let totalPoints = 0;
+  let scoredShotCount = 0;
   for (const shot of shots) {
-    totalPoints += shot.score;
+    if (shot.score !== null) {
+      totalPoints += shot.score;
+      scoredShotCount += 1;
+    }
     shotTypeCounts[shot.shotType]++;
     outcomeCounts[shot.outcome]++;
     const distKey = String(shot.distance);
     distanceMap.set(distKey, (distanceMap.get(distKey) ?? 0) + 1);
-    scoreMap.set(shot.score, (scoreMap.get(shot.score) ?? 0) + 1);
+    if (shot.score !== null) {
+      scoreMap.set(shot.score, (scoreMap.get(shot.score) ?? 0) + 1);
+    }
 
     if (isHitShot(shot)) {
       madeShots += 1;
@@ -191,7 +198,7 @@ export function computePlayerStats(data: AppData, playerId: string): PlayerStats
     winRate: gamesPlayed > 0 ? (wins / gamesPlayed) * 100 : 0,
     totalShots: shots.length,
     totalPoints,
-    avgScorePerShot: shots.length > 0 ? totalPoints / shots.length : 0,
+    avgScorePerShot: scoredShotCount > 0 ? totalPoints / scoredShotCount : 0,
     hitRate: shots.length > 0 ? (madeShots / shots.length) * 100 : 0,
     shotTypeCounts,
     outcomeCounts,

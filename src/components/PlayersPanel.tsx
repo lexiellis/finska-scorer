@@ -1,18 +1,29 @@
 import { useState } from 'react';
 import type { AppData } from '../types';
+import type { StorageMode } from '../storage';
 import { getPlayerThrowCount } from '../stats';
 
 interface PlayersPanelProps {
   data: AppData;
+  storageMode: StorageMode;
   onAdd: (name: string) => void;
   onRemove: (id: string) => void;
   onImportCsv: (csvText: string) => string;
+  onResetToImportedLog: () => Promise<string>;
 }
 
-export function PlayersPanel({ data, onAdd, onRemove, onImportCsv }: PlayersPanelProps) {
+export function PlayersPanel({
+  data,
+  storageMode,
+  onAdd,
+  onRemove,
+  onImportCsv,
+  onResetToImportedLog,
+}: PlayersPanelProps) {
   const { players } = data;
   const [name, setName] = useState('');
   const [importMessage, setImportMessage] = useState('');
+  const [resetting, setResetting] = useState(false);
 
   const handleAdd = () => {
     const trimmed = name.trim();
@@ -21,11 +32,18 @@ export function PlayersPanel({ data, onAdd, onRemove, onImportCsv }: PlayersPane
     setName('');
   };
 
+  const storageLabel =
+    storageMode === 'supabase'
+      ? 'Shared sync (Supabase) — all devices see the same data'
+      : 'This device only (browser localStorage) — set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY on Vercel to sync';
+
   return (
     <div className="panel">
       <header className="panel-header">
         <h2>Players</h2>
       </header>
+
+      <p className={`storage-status storage-status--${storageMode}`}>{storageLabel}</p>
 
       <form
         className="add-row"
@@ -76,7 +94,8 @@ export function PlayersPanel({ data, onAdd, onRemove, onImportCsv }: PlayersPane
       <section className="import-section">
         <h3 className="field-label">Import spreadsheet log</h3>
         <p className="import-hint">
-          Upload a Log.csv export (stats session). Already-imported logs are skipped automatically.
+          Upload a Log.csv export (stats session). Pin counts are left blank unless you enter them
+          when logging new throws.
         </p>
         <label className="btn secondary import-file-btn">
           Choose CSV
@@ -97,6 +116,20 @@ export function PlayersPanel({ data, onAdd, onRemove, onImportCsv }: PlayersPane
             }}
           />
         </label>
+        <button
+          type="button"
+          className="btn ghost danger reset-data-btn"
+          disabled={resetting}
+          onClick={() => {
+            setResetting(true);
+            void onResetToImportedLog().then((message) => {
+              setImportMessage(message);
+              setResetting(false);
+            });
+          }}
+        >
+          {resetting ? 'Resetting…' : 'Clear all & re-import bundled log'}
+        </button>
         {importMessage && <p className="import-status">{importMessage}</p>}
       </section>
     </div>

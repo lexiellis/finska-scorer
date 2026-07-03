@@ -2043,6 +2043,26 @@
   gap: 0.5rem;
 }
 
+.storage-status {
+  margin: 0 0 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  line-height: 1.4;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.storage-status--supabase {
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+  color: var(--text);
+}
+
+.reset-data-btn {
+  width: fit-content;
+}
+
 .import-hint {
   margin: 0;
   font-size: 0.85rem;

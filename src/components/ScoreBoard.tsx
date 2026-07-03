@@ -1,6 +1,7 @@
 import { useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 import { FINSKA_TARGET } from '../scoring';
 import { getOutcomeIcon, OUTCOME_BUTTON_LABELS } from '../outcomeDisplay';
+import { isHitShot } from '../stats';
 import { getGameShots, isStatsSession, teamDisplayName } from '../teams';
 import type { AppData, Distance, Game, Outcome, Shot, ShotType } from '../types';
 import { DISTANCES, OUTCOMES, SHOT_TYPES } from '../types';
@@ -23,7 +24,8 @@ function getUpcomingPlayerForTeam(teamShots: Shot[], team: { playerIds: string[]
   return team.playerIds[playerIndex] ?? null;
 }
 
-function formatPins(score: number): string {
+function formatPins(score: number | null): string {
+  if (score === null) return '—';
   if (score === 0) return '·';
   return String(score);
 }
@@ -302,9 +304,12 @@ export function ScoreBoard({
                     );
                   }
 
-                  const isMiss = shot.score === 0;
+                  const isMiss = !isHitShot(shot);
                   const isBust =
-                    !isStats && !isMiss && shot.scoreBefore + shot.score > FINSKA_TARGET;
+                    !isStats &&
+                    !isMiss &&
+                    shot.score !== null &&
+                    shot.scoreBefore + shot.score > FINSKA_TARGET;
                   const isEditing = editingShotId === shot.id && draft !== null;
 
                   const startEdit = () => {
@@ -313,7 +318,7 @@ export function ScoreBoard({
                     setDraft({
                       shotType: shot.shotType,
                       distance: shot.distance,
-                      score: shot.score,
+                      score: shot.score ?? 0,
                       outcome: shot.outcome,
                     });
                   };
@@ -355,7 +360,11 @@ export function ScoreBoard({
                   return (
                     <div key={shot.id} className="score-bubble-row" onClick={startEdit}>
                       <div className={`score-bubble-row-total ${scoreClass}`}>
-                        {isStats ? shot.score : shot.scoreAfter}
+                        {isStats
+                          ? shot.score === null
+                            ? '—'
+                            : shot.score
+                          : shot.scoreAfter}
                       </div>
                       <div className={`score-bubble-row-throw ${scoreClass}`}>
                         {formatPins(shot.score)}

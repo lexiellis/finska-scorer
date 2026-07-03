@@ -51,8 +51,8 @@ export interface Shot {
   playerId: string;
   shotType: ShotType;
   distance: Distance;
-  /** Pins knocked (0–12). */
-  score: number;
+  /** Pins knocked (0–12). Null when unknown (e.g. spreadsheet import). */
+  score: number | null;
   outcome: Outcome;
   recordedAt: string;
   scoreBefore: number;

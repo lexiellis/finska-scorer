@@ -28,6 +28,8 @@ export default function App() {
     undoLastShot,
     updateShot,
     importCsvLog,
+    resetToImportedLog,
+    storageMode,
   } = useAppData();
 
   const loggingActive = tab === 'game' && getActiveGame(data) !== null;
@@ -59,9 +61,11 @@ export default function App() {
         {tab === 'players' && (
           <PlayersPanel
             data={data}
+            storageMode={storageMode}
             onAdd={addPlayer}
             onRemove={removePlayer}
             onImportCsv={importCsvLog}
+            onResetToImportedLog={resetToImportedLog}
           />
         )}
       </main>

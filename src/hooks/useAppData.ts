@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
-import { importBundledMolkkyLog, importLogCsv } from '../importLogCsv';
+import { IMPORT_DATA_VERSION, importBundledMolkkyLog, importLogCsv } from '../importLogCsv';
 import { applyFinskaScore } from '../scoring';
 import {
+  clearLocalAppData,
   createId,
+  getStorageMode,
   isRemoteStorageConfigured,
   loadData,
   loadRemoteData,
   saveData,
+  setImportDataVersion,
+  getImportDataVersion,
 } from '../storage';
 import {
   getTeamForPlayer,
@@ -23,7 +27,7 @@ function recalculateShotScores(game: Game, shots: Shot[]): Shot[] {
     const scoreBefore = scores[shot.teamId] ?? 0;
     let scoreAfter = scoreBefore;
 
-    if (!isMissOutcome(shot.outcome, shot.score)) {
+    if (!isMissOutcome(shot.outcome, shot.score) && shot.score !== null) {
       const applied = applyFinskaScore(scoreBefore, shot.score);
       scoreAfter = applied.newScore;
     }
@@ -36,19 +40,34 @@ function recalculateShotScores(game: Game, shots: Shot[]): Shot[] {
 export function useAppData() {
   const [data, setData] = useState<AppData>(loadData);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [storageMode] = useState(getStorageMode);
 
   useEffect(() => {
     let isCancelled = false;
 
     async function hydrate() {
-      let loaded = loadData();
-      if (isRemoteStorageConfigured()) {
-        const remoteData = await loadRemoteData();
-        if (remoteData) loaded = remoteData;
+      const needsFreshImport = getImportDataVersion() !== IMPORT_DATA_VERSION;
+      let loaded: AppData = { players: [], games: [], shots: [] };
+
+      if (!needsFreshImport) {
+        loaded = loadData();
+        if (isRemoteStorageConfigured()) {
+          const remoteData = await loadRemoteData();
+          if (remoteData) loaded = remoteData;
+        }
+      } else {
+        clearLocalAppData();
       }
 
-      const imported = await importBundledMolkkyLog(loaded);
+      const imported = await importBundledMolkkyLog(loaded, {
+        freshImport: needsFreshImport,
+      });
       if (isCancelled) return;
+
+      if (imported.imported > 0 || needsFreshImport) {
+        setImportDataVersion(IMPORT_DATA_VERSION);
+      }
+
       setData(imported.data);
       setIsHydrated(true);
     }
@@ -335,6 +354,17 @@ export function useAppData() {
     [update],
   );
 
+  const resetToImportedLog = useCallback(async () => {
+    clearLocalAppData();
+    const imported = await importBundledMolkkyLog(
+      { players: [], games: [], shots: [] },
+      { freshImport: true },
+    );
+    setImportDataVersion(IMPORT_DATA_VERSION);
+    setData(imported.data);
+    return imported.message;
+  }, []);
+
   const importCsvLog = useCallback((csvText: string) => {
     let resultMessage = '';
     update((prev) => {
@@ -358,5 +388,7 @@ export function useAppData() {
     undoLastShot,
     updateShot,
     importCsvLog,
+    resetToImportedLog,
+    storageMode,
   };
 }

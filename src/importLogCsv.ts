@@ -88,9 +88,8 @@ function normalizeShotType(raw: string): ShotType | null {
   return SHOT_TYPES.includes(raw as ShotType) ? (raw as ShotType) : null;
 }
 
-function scoreFromRow(hit: string, outcome: Outcome): number {
-  if (hit === '✗' || outcome === 'Miss' || outcome === 'Wrong Pin') return 0;
-  return 1;
+function scoreFromRow(_hit: string, _outcome: Outcome): number | null {
+  return null;
 }
 
 function upsertPlayer(players: Player[], name: string): { players: Player[]; player: Player } {
@@ -104,29 +103,32 @@ function upsertPlayer(players: Player[], name: string): { players: Player[]; pla
   return { players: [...players, player], player };
 }
 
+export const IMPORT_DATA_VERSION = 'v2-null-scores';
+
 export function importLogCsv(
   csvText: string,
   existing: AppData,
-  options: { sessionId?: string; replaceExisting?: boolean } = {},
+  options: { sessionId?: string; replaceExisting?: boolean; freshImport?: boolean } = {},
 ): ImportLogResult {
   const sessionId = options.sessionId ?? BUNDLED_LOG_SESSION_ID;
+  const base = options.freshImport ? emptyAppData() : existing;
   const rows = parseCsvRows(csvText);
 
   if (rows.length === 0) {
-    return { data: existing, imported: 0, skipped: true, message: 'No rows found in CSV' };
+    return { data: base, imported: 0, skipped: true, message: 'No rows found in CSV' };
   }
 
-  const alreadyImported = existing.games.some((g) => g.id === sessionId);
-  if (alreadyImported && !options.replaceExisting) {
+  const alreadyImported = base.games.some((g) => g.id === sessionId);
+  if (alreadyImported && !options.replaceExisting && !options.freshImport) {
     return {
-      data: existing,
+      data: base,
       imported: 0,
       skipped: true,
       message: 'This log was already imported',
     };
   }
 
-  let players = [...existing.players];
+  let players = [...base.players];
   const playerIdByName = new Map<string, string>();
   const shots: Shot[] = [];
   let lastDate = new Date(2026, 6, 2, 12, 0, 0, 0);
@@ -173,7 +175,7 @@ export function importLogCsv(
   }
 
   if (shots.length === 0) {
-    return { data: existing, imported: 0, skipped: true, message: 'No valid shots in CSV' };
+    return { data: base, imported: 0, skipped: true, message: 'No valid shots in CSV' };
   }
 
   const teamPlayerIds = [...new Set(shots.map((s) => s.playerId))];
@@ -194,12 +196,16 @@ export function importLogCsv(
     endedAt: shots[shots.length - 1]!.recordedAt,
   };
 
-  const games = alreadyImported
-    ? existing.games.map((g) => (g.id === sessionId ? game : g))
-    : [...existing.games, game];
-  const existingShots = alreadyImported
-    ? existing.shots.filter((s) => s.gameId !== sessionId)
-    : existing.shots;
+  const games = options.freshImport
+    ? [game]
+    : alreadyImported
+      ? base.games.map((g) => (g.id === sessionId ? game : g))
+      : [...base.games, game];
+  const existingShots = options.freshImport
+    ? []
+    : alreadyImported
+      ? base.shots.filter((s) => s.gameId !== sessionId)
+      : base.shots;
 
   return {
     data: {
@@ -213,14 +219,25 @@ export function importLogCsv(
   };
 }
 
-export async function importBundledMolkkyLog(existing: AppData): Promise<ImportLogResult> {
+function emptyAppData(): AppData {
+  return { players: [], games: [], shots: [] };
+}
+
+export async function importBundledMolkkyLog(
+  existing: AppData,
+  options: { freshImport?: boolean } = {},
+): Promise<ImportLogResult> {
   try {
     const res = await fetch('/data/molkky-log.csv');
     if (!res.ok) {
       return { data: existing, imported: 0, skipped: true, message: 'Bundled CSV not found' };
     }
     const csv = await res.text();
-    return importLogCsv(csv, existing, { sessionId: BUNDLED_LOG_SESSION_ID });
+    return importLogCsv(csv, existing, {
+      sessionId: BUNDLED_LOG_SESSION_ID,
+      replaceExisting: true,
+      freshImport: options.freshImport,
+    });
   } catch {
     return { data: existing, imported: 0, skipped: true, message: 'Failed to load bundled CSV' };
   }
