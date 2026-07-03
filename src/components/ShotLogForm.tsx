@@ -144,7 +144,7 @@ export function ShotLogForm({
 
         <section className="log-section log-section--distance">
           <h3 className="log-section-title">
-            Distance {isDistanceLocked ? '(locked to 4m)' : ''}
+            Distance {isDistanceLocked ? '(locked to 3m)' : ''}
           </h3>
           <div className="btn-grid cols-6 btn-grid--distance">
             {DISTANCES.map((d) => (

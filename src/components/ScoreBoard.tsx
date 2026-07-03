@@ -105,7 +105,7 @@ function ShotEditForm({
               ? {
                   ...prev,
                   shotType: e.target.value as ShotType,
-                  distance: e.target.value === '12 Break' ? 4 : prev.distance,
+                  distance: e.target.value === '12 Break' ? 3 : prev.distance,
                 }
               : prev,
           )

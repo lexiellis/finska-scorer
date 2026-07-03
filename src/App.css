@@ -353,7 +353,7 @@
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-rows: minmax(0, 0.92fr) minmax(0, 0.52fr) minmax(0, 1.22fr) minmax(0, 0.82fr);
+  grid-template-rows: minmax(0, 0.92fr) minmax(0, 0.68fr) minmax(0, 1.06fr) minmax(0, 0.82fr);
   gap: clamp(0.2rem, 0.65vh, 0.4rem);
   overflow: hidden;
 }
@@ -1519,8 +1519,12 @@
 }
 
 .shot-log .log-fields {
-  grid-template-rows: minmax(0, 0.95fr) minmax(0, 0.5fr) minmax(0, 1.2fr) minmax(0, 0.8fr);
+  grid-template-rows: minmax(0, 0.95fr) minmax(0, 0.66fr) minmax(0, 1.04fr) minmax(0, 0.8fr);
   gap: clamp(0.28rem, 0.75vh, 0.48rem);
+}
+
+.shot-log .log-section--distance .pick-btn {
+  min-height: clamp(44px, 6.2vh, 54px);
 }
 
 .shot-log .log-section {
