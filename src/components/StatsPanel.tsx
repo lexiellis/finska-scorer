@@ -3,12 +3,14 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  LabelList,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts';
 import { computeAllPlayersStats, computePlayerStats, getPlayerThrowCount } from '../stats';
+import type { HeatmapCell } from '../stats';
 import type { AppData, ShotType } from '../types';
 import { OUTCOMES, SHOT_TYPES } from '../types';
 import { getOutcomeIcon } from '../outcomeDisplay';
@@ -72,6 +74,60 @@ function RateTooltip({
           {entry.name}: {Math.round(Number(entry.value ?? 0))}%
         </p>
       ))}
+    </div>
+  );
+}
+
+function heatmapCellRate(cell: HeatmapCell, rateView: RateView): number | null {
+  return rateView === 'success' ? cell.successRate : cell.sosoPlusRate;
+}
+
+function RateViewToggle({
+  rateView,
+  onChange,
+}: {
+  rateView: RateView;
+  onChange: (view: RateView) => void;
+}) {
+  return (
+    <div className="player-chips rate-view-chips rate-view-chips--inline">
+      <button
+        type="button"
+        className={`chip ${rateView === 'success' ? 'selected' : ''}`}
+        onClick={() => onChange('success')}
+      >
+        Success
+      </button>
+      <button
+        type="button"
+        className={`chip ${rateView === 'soso' ? 'selected' : ''}`}
+        onClick={() => onChange('soso')}
+      >
+        Soso+
+      </button>
+    </div>
+  );
+}
+
+function CountPctTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: Array<{ name?: string; value?: number; payload?: { count?: number; pct?: number } }>;
+  label?: string;
+}): ReactNode {
+  if (!active || !payload?.length) return null;
+  const row = payload[0]?.payload;
+  const count = row?.count ?? Number(payload[0]?.value ?? 0);
+  const pct = row?.pct ?? 0;
+  return (
+    <div className="chart-tooltip">
+      <p className="chart-tooltip-label">{label}</p>
+      <p className="chart-tooltip-throws">
+        {count} throws ({Math.round(pct)}%)
+      </p>
     </div>
   );
 }
@@ -175,9 +231,11 @@ export function StatsPanel({ data }: StatsPanelProps) {
   });
 
   const shotTypeData = stats
-    ? SHOT_TYPES.map((t) => ({ name: t, count: stats.shotTypeCounts[t] })).filter(
-        (d) => d.count > 0,
-      )
+    ? SHOT_TYPES.map((t) => ({
+        name: t,
+        count: stats.shotTypeCounts[t],
+        pct: stats.totalShots > 0 ? (stats.shotTypeCounts[t] / stats.totalShots) * 100 : 0,
+      })).filter((d) => d.count > 0)
     : [];
 
   return (
@@ -208,28 +266,12 @@ export function StatsPanel({ data }: StatsPanelProps) {
         ))}
       </div>
 
-      {stats && stats.totalShots > 0 && (
-        <div className="player-chips rate-view-chips">
-          <button
-            type="button"
-            className={`chip ${rateView === 'success' ? 'selected' : ''}`}
-            onClick={() => setRateView('success')}
-          >
-            Success
-          </button>
-          <button
-            type="button"
-            className={`chip ${rateView === 'soso' ? 'selected' : ''}`}
-            onClick={() => setRateView('soso')}
-          >
-            Soso+
-          </button>
-        </div>
-      )}
-
       {selectedId === null && overview.some((o) => (o.throws ?? 0) > 0) && (
         <section className="chart-card">
-          <h3>All players</h3>
+          <div className="chart-card-head">
+            <h3>All players</h3>
+            <RateViewToggle rateView={rateView} onChange={setRateView} />
+          </div>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={overview} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={CHART.grid} />
@@ -261,7 +303,10 @@ export function StatsPanel({ data }: StatsPanelProps) {
 
           {shotTypeFilters.length > 0 && (
             <section className="chart-card">
-              <h3>Success &amp; Soso+ by distance</h3>
+              <div className="chart-card-head">
+                <h3>Success by distance</h3>
+                <RateViewToggle rateView={rateView} onChange={setRateView} />
+              </div>
               <div className="player-chips shot-type-chips">
                 {shotTypeFilters.map((entry) => (
                   <button
@@ -305,7 +350,10 @@ export function StatsPanel({ data }: StatsPanelProps) {
 
           {stats.heatmapGrid.length > 0 && (
             <section className="chart-card">
-              <h3>Success rate by shot type &amp; distance</h3>
+              <div className="chart-card-head">
+                <h3>Success rate by shot type &amp; distance</h3>
+                <RateViewToggle rateView={rateView} onChange={setRateView} />
+              </div>
               <div className="heatmap-wrap">
                 <table className="heatmap-table">
                   <thead>
@@ -325,20 +373,23 @@ export function StatsPanel({ data }: StatsPanelProps) {
                         className={row.shotType === 'ALL SHOTS' ? 'heatmap-row--total' : ''}
                       >
                         <th scope="row">{row.shotType}</th>
-                        {row.cells.map((cell) => (
-                          <td key={cell.distance}>
-                            <span
-                              className={heatmapCellClass(cell.successRate)}
-                              title={
-                                cell.attempts > 0
-                                  ? `${cell.attempts} throws`
-                                  : 'No throws'
-                              }
-                            >
-                              {formatRate(cell.successRate)}
-                            </span>
-                          </td>
-                        ))}
+                        {row.cells.map((cell) => {
+                          const rate = heatmapCellRate(cell, rateView);
+                          return (
+                            <td key={cell.distance}>
+                              <span
+                                className={heatmapCellClass(rate)}
+                                title={
+                                  cell.attempts > 0
+                                    ? `${cell.attempts} throws`
+                                    : 'No throws'
+                                }
+                              >
+                                {formatRate(rate)}
+                              </span>
+                            </td>
+                          );
+                        })}
                       </tr>
                     ))}
                   </tbody>
@@ -389,7 +440,7 @@ export function StatsPanel({ data }: StatsPanelProps) {
             <section className="chart-card">
               <h3>Shot types</h3>
               <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={shotTypeData} layout="vertical" margin={{ left: 8 }}>
+                <BarChart data={shotTypeData} layout="vertical" margin={{ left: 8, right: 36 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={CHART.grid} />
                   <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
                   <YAxis
@@ -398,8 +449,15 @@ export function StatsPanel({ data }: StatsPanelProps) {
                     width={100}
                     tick={{ fontSize: 10 }}
                   />
-                  <Tooltip />
-                  <Bar dataKey="count" name="Throws" fill={CHART.tertiary} radius={[0, 4, 4, 0]} />
+                  <Tooltip content={<CountPctTooltip />} />
+                  <Bar dataKey="count" name="Throws" fill={CHART.tertiary} radius={[0, 4, 4, 0]}>
+                    <LabelList
+                      dataKey="pct"
+                      position="right"
+                      formatter={(value) => `${Math.round(Number(value ?? 0))}%`}
+                      className="bar-pct-label"
+                    />
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </section>
@@ -407,14 +465,29 @@ export function StatsPanel({ data }: StatsPanelProps) {
 
           {stats.distanceBuckets.length > 0 && (
             <section className="chart-card">
-              <h3>Distance</h3>
+              <h3>
+                Distance
+                {stats.avgDistance !== null && (
+                  <span className="chart-card-subtitle">
+                    {' '}
+                    · avg {stats.avgDistance.toFixed(1)}m
+                  </span>
+                )}
+              </h3>
               <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={stats.distanceBuckets}>
+                <BarChart data={stats.distanceBuckets} margin={{ top: 16, right: 8, left: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={CHART.grid} />
                   <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                   <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                  <Tooltip />
-                  <Bar dataKey="count" name="Throws" fill={CHART.primary} radius={[4, 4, 0, 0]} />
+                  <Tooltip content={<CountPctTooltip />} />
+                  <Bar dataKey="count" name="Throws" fill={CHART.primary} radius={[4, 4, 0, 0]}>
+                    <LabelList
+                      dataKey="pct"
+                      position="top"
+                      formatter={(value) => `${Math.round(Number(value ?? 0))}%`}
+                      className="bar-pct-label"
+                    />
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </section>

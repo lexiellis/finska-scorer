@@ -1204,6 +1204,43 @@
   font-size: 0.95rem;
 }
 
+.chart-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.chart-card-head h3 {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.chart-card-subtitle {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.rate-view-chips--inline {
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.rate-view-chips--inline .chip {
+  padding: 0.28rem 0.65rem;
+  font-size: 0.72rem;
+}
+
+.bar-pct-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  fill: var(--text-muted);
+}
+
 .stats-panel {
   padding-bottom: 2rem;
 }

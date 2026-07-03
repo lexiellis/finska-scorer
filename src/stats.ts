@@ -39,7 +39,8 @@ export interface PlayerStats {
   sosoPlusRate: number;
   shotTypeCounts: Record<ShotType, number>;
   outcomeCounts: Record<Outcome, number>;
-  distanceBuckets: { label: string; count: number }[];
+  distanceBuckets: { label: string; count: number; pct: number }[];
+  avgDistance: number | null;
   scoreDistribution: { score: number; count: number }[];
   scoringRate: number;
   twelveRate: number;
@@ -67,6 +68,8 @@ export interface HeatmapCell {
   distance: string;
   attempts: number;
   successRate: number | null;
+  sosoOnlyRate: number | null;
+  sosoPlusRate: number | null;
 }
 
 export interface HeatmapRow {
@@ -111,6 +114,11 @@ function outcomeRate(shots: Shot[], predicate: (shot: Shot) => boolean): number 
   return (shots.filter(predicate).length / shots.length) * 100;
 }
 
+function distanceNumericValue(distance: Shot['distance']): number {
+  if (distance === '12+') return 12;
+  return distance;
+}
+
 function buildHeatmapGrid(shots: Shot[]): HeatmapRow[] {
   const rows: HeatmapRow[] = SHOT_TYPES.map((shotType) => {
     const typeShots = shots.filter((s) => s.shotType === shotType);
@@ -121,6 +129,8 @@ function buildHeatmapGrid(shots: Shot[]): HeatmapRow[] {
         distance,
         attempts,
         successRate: outcomeRate(cellShots, isIntendedOutcome),
+        sosoOnlyRate: outcomeRate(cellShots, isSosoOnlyOutcome),
+        sosoPlusRate: outcomeRate(cellShots, isSosoPlusOutcome),
       };
     });
     return {
@@ -138,6 +148,8 @@ function buildHeatmapGrid(shots: Shot[]): HeatmapRow[] {
         distance,
         attempts,
         successRate: outcomeRate(cellShots, isIntendedOutcome),
+        sosoOnlyRate: outcomeRate(cellShots, isSosoOnlyOutcome),
+        sosoPlusRate: outcomeRate(cellShots, isSosoPlusOutcome),
       };
     });
     rows.push({
@@ -242,7 +254,9 @@ function computeStatsFromShots(data: AppData, player: Player, shots: Shot[]): Pl
 
   let totalPoints = 0;
   let scoredShotCount = 0;
+  let distanceSum = 0;
   for (const shot of shots) {
+    distanceSum += distanceNumericValue(shot.distance);
     if (shot.score !== null) {
       totalPoints += shot.score;
       scoredShotCount += 1;
@@ -274,7 +288,11 @@ function computeStatsFromShots(data: AppData, player: Player, shots: Shot[]): Pl
   }
 
   const distanceBuckets = [...distanceMap.entries()]
-    .map(([label, count]) => ({ label: label.endsWith('+') ? label : `${label}m`, count }))
+    .map(([label, count]) => ({
+      label: label.endsWith('+') ? label : `${label}m`,
+      count,
+      pct: shots.length > 0 ? (count / shots.length) * 100 : 0,
+    }))
     .sort((a, b) => sortDistanceLabels(a.label, b.label));
 
   const scoreDistribution = Array.from({ length: 13 }, (_, score) => ({
@@ -296,6 +314,7 @@ function computeStatsFromShots(data: AppData, player: Player, shots: Shot[]): Pl
     shotTypeCounts,
     outcomeCounts,
     distanceBuckets,
+    avgDistance: shots.length > 0 ? distanceSum / shots.length : null,
     scoreDistribution,
     scoringRate: shots.length > 0 ? (intendedShots / shots.length) * 100 : 0,
     twelveRate: shots.length > 0 ? (twelveShots / shots.length) * 100 : 0,
