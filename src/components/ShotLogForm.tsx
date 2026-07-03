@@ -146,7 +146,7 @@ export function ShotLogForm({
           <h3 className="log-section-title">
             Distance {isDistanceLocked ? '(locked to 3m)' : ''}
           </h3>
-          <div className="btn-grid cols-6 btn-grid--distance">
+          <div className="btn-grid btn-grid--distance">
             {DISTANCES.map((d) => (
               <button
                 key={String(d)}

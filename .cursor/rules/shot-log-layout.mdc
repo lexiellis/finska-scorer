@@ -1,0 +1,21 @@
+---
+description: Shot log form layout — size sections by content, not fixed ratios
+globs: src/App.css, src/components/ShotLogForm.tsx
+alwaysApply: false
+---
+
+# Shot log layout
+
+The log form fills one screen on phone/tablet. **Do not assign arbitrary `fr` row heights.**
+
+## Rules
+
+1. **Flex-grow weights** on `.log-section--type|distance|score|outcome` must reflect actual button rows and tap-target needs (see `--section-*-weight` on `.shot-log`).
+2. **Shot type** — 10 buttons, 5 cols → 2 rows → lowest weight.
+3. **Distance** — 11 buttons; 4 cols × 3 rows on narrow phones, 6 cols × 2 rows from 520px → highest non-score weight.
+4. **Score** — 13-button custom grid (3 rows) → largest weight.
+5. **Outcome** — 6 buttons, 3 cols → 2 rows → medium weight.
+6. Inside each section, set explicit `grid-template-rows: repeat(N, minmax(0, 1fr))` and `align-content: stretch` so buttons fill their slice without dead space.
+7. **Short viewports** (`max-height: 560px`) — switch to fixed `auto` row heights and allow scroll; do not crush controls.
+
+When changing column counts or button counts, update the CSS variables and row counts together.

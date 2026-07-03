@@ -84,6 +84,13 @@
 .shot-log {
   --log-btn-min: clamp(40px, 5.5vh, 48px);
   --log-btn-radius: 18px;
+  /* Section height shares — proportional to button rows + tap target needs */
+  --section-type-weight: 1.65;
+  --section-distance-weight: 3.2;
+  --section-score-weight: 3.4;
+  --section-outcome-weight: 2.15;
+  --distance-cols: 4;
+  --distance-rows: 3;
   position: relative;
   flex: 1;
   min-height: 0;
@@ -91,6 +98,24 @@
   display: flex;
   flex-direction: column;
   gap: clamp(0.25rem, 0.8vh, 0.5rem);
+}
+
+@media (min-width: 520px) {
+  .shot-log {
+    --section-type-weight: 1.75;
+    --section-distance-weight: 2.75;
+    --distance-cols: 6;
+    --distance-rows: 2;
+  }
+}
+
+@media (min-width: 768px) {
+  .shot-log {
+    --section-type-weight: 1.85;
+    --section-distance-weight: 2.65;
+    --section-score-weight: 3.5;
+    --section-outcome-weight: 2.25;
+  }
 }
 
 .shot-toast {
@@ -352,9 +377,9 @@
 .log-fields {
   flex: 1;
   min-height: 0;
-  display: grid;
-  grid-template-rows: minmax(0, 0.92fr) minmax(0, 0.68fr) minmax(0, 1.06fr) minmax(0, 0.82fr);
-  gap: clamp(0.2rem, 0.65vh, 0.4rem);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.22rem, 0.6vh, 0.4rem);
   overflow: hidden;
 }
 
@@ -363,11 +388,27 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: clamp(0.22rem, 0.65vh, 0.38rem);
+  padding: clamp(0.22rem, 0.55vh, 0.36rem);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: 0 1px 4px rgba(27, 67, 50, 0.05);
+}
+
+.log-section--type {
+  flex: var(--section-type-weight) 1 0;
+}
+
+.log-section--distance {
+  flex: var(--section-distance-weight) 1 0;
+}
+
+.log-section--score {
+  flex: var(--section-score-weight) 1 0;
+}
+
+.log-section--outcome {
+  flex: var(--section-outcome-weight) 1 0;
 }
 
 .log-section .btn-grid,
@@ -375,13 +416,27 @@
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  align-content: stretch;
+}
+
+.log-section--type .btn-grid {
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+
+.log-section--distance .btn-grid {
+  grid-template-columns: repeat(var(--distance-cols), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--distance-rows), minmax(0, 1fr));
+}
+
+.log-section--outcome .btn-grid {
+  grid-template-rows: repeat(2, minmax(0, 1fr));
 }
 
 .btn-grid {
   display: grid;
-  gap: clamp(0.24rem, 0.75vh, 0.45rem);
+  gap: clamp(0.2rem, 0.6vh, 0.4rem);
   grid-auto-rows: minmax(0, 1fr);
-  align-content: start;
+  align-content: stretch;
   width: 100%;
 }
 
@@ -406,7 +461,7 @@
 }
 
 .btn-grid--distance {
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(var(--distance-cols), minmax(0, 1fr));
 }
 
 .pick-btn {
@@ -680,8 +735,22 @@
     -webkit-overflow-scrolling: touch;
   }
 
+  .shot-log {
+    --section-type-weight: 1;
+    --section-distance-weight: 1;
+    --section-score-weight: 1;
+    --section-outcome-weight: 1;
+  }
+
   .log-fields {
-    grid-template-rows: auto;
+    flex: none;
+    overflow: visible;
+  }
+
+  .log-section--type,
+  .log-section--distance,
+  .log-section--score,
+  .log-section--outcome {
     flex: none;
   }
 
@@ -689,6 +758,13 @@
   .shot-log .score-grid {
     flex: none;
     height: auto;
+  }
+
+  .log-section--type .btn-grid,
+  .log-section--distance .btn-grid,
+  .log-section--outcome .btn-grid {
+    grid-template-rows: auto;
+    grid-auto-rows: var(--log-btn-min);
   }
 
   .btn-grid {
@@ -1519,12 +1595,7 @@
 }
 
 .shot-log .log-fields {
-  grid-template-rows: minmax(0, 0.95fr) minmax(0, 0.66fr) minmax(0, 1.04fr) minmax(0, 0.8fr);
-  gap: clamp(0.28rem, 0.75vh, 0.48rem);
-}
-
-.shot-log .log-section--distance .pick-btn {
-  min-height: clamp(44px, 6.2vh, 54px);
+  gap: clamp(0.24rem, 0.65vh, 0.42rem);
 }
 
 .shot-log .log-section {
@@ -1576,6 +1647,15 @@
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--text-muted);
+}
+
+.shot-log .log-section--type .pick-btn {
+  font-size: clamp(0.72rem, 2vw, 0.92rem);
+  padding: 0.2rem 0.25rem;
+}
+
+.shot-log .log-section--distance .pick-btn {
+  font-size: clamp(0.82rem, 2.4vw, 1rem);
 }
 
 .shot-log .btn-grid {
