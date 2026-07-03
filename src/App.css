@@ -513,9 +513,9 @@
 .option-btn.selected,
 .player-pill.selected,
 .score-circle.selected {
-  border-color: var(--primary);
+  border-color: var(--selected-border);
   background: var(--selected-bg);
-  color: var(--primary);
+  color: var(--selected-text);
 }
 
 .shot-log .score-grid {
@@ -977,8 +977,8 @@
 }
 
 .chip.selected .chip-score {
-  background: rgba(45, 106, 79, 0.12);
-  color: var(--primary);
+  background: rgba(214, 51, 132, 0.14);
+  color: var(--selected-text);
 }
 
 .chip.selected-outline {

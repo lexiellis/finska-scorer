@@ -2,7 +2,9 @@
   --app-bg: #faf6eb;
   --bg: #ffffff;
   --surface: #ffffff;
-  --selected-bg: #e8f5e9;
+  --selected-bg: #fce4f0;
+  --selected-border: #d63384;
+  --selected-text: #b51766;
   --text: #1b2e1f;
   --text-muted: #5c6f62;
   --primary: #2d6a4f;
