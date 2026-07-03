@@ -35,13 +35,9 @@ export default function App() {
   return (
     <div className={`app ${loggingActive ? 'app--logging' : ''}`}>
       <header className="app-header">
-        {loggingActive ? (
-          <h1>🎯 Finska Scorer</h1>
-        ) : (
-          <>
-            <h1>Finska Scorer</h1>
-            <p>Log every throw. Track the stats.</p>
-          </>
+        <h1>{loggingActive ? '🎯 Finska Scorer' : 'Finska Scorer'}</h1>
+        {!loggingActive && (
+          <p className="app-tagline">Log every throw. Throw every log.</p>
         )}
       </header>
 
