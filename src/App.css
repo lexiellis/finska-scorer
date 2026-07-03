@@ -2223,6 +2223,11 @@
 
 .stat-cards--primary {
   margin-bottom: 0.5rem;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.shot-type-chips {
+  margin-bottom: 0.65rem;
 }
 
 .stat-cards--compact {

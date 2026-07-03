@@ -11,6 +11,14 @@ export function isHitShot(shot: Shot): boolean {
   return shot.outcome !== 'Miss' && shot.outcome !== 'Wrong Pin';
 }
 
+export function isIntendedOutcome(shot: Shot): boolean {
+  return shot.outcome === 'Intended';
+}
+
+export function isSosoPlusOutcome(shot: Shot): boolean {
+  return shot.outcome === 'Intended' || shot.outcome === 'So-so';
+}
+
 export interface PlayerStats {
   player: Player;
   gamesPlayed: number;
@@ -19,7 +27,10 @@ export interface PlayerStats {
   totalShots: number;
   totalPoints: number;
   avgScorePerShot: number;
-  hitRate: number;
+  /** Intended outcome / all throws */
+  successRate: number;
+  /** Intended + So-so / all throws */
+  sosoPlusRate: number;
   shotTypeCounts: Record<ShotType, number>;
   outcomeCounts: Record<Outcome, number>;
   distanceBuckets: { label: string; count: number }[];
@@ -29,6 +40,20 @@ export interface PlayerStats {
   bestScoringStreak: number;
   heatmapGrid: HeatmapRow[];
   outcomeByShotType: OutcomeByTypeRow[];
+  distanceRatesByShotType: ShotTypeDistanceRates[];
+}
+
+export interface DistanceRatePoint {
+  label: string;
+  distance: string;
+  attempts: number;
+  successRate: number | null;
+  sosoPlusRate: number | null;
+}
+
+export interface ShotTypeDistanceRates {
+  shotType: ShotType | 'ALL';
+  points: DistanceRatePoint[];
 }
 
 export interface HeatmapCell {
@@ -74,25 +99,27 @@ export function getPlayerShots(data: AppData, playerId: string): Shot[] {
   return data.shots.filter((s) => s.playerId === playerId);
 }
 
+function outcomeRate(shots: Shot[], predicate: (shot: Shot) => boolean): number | null {
+  if (shots.length === 0) return null;
+  return (shots.filter(predicate).length / shots.length) * 100;
+}
+
 function buildHeatmapGrid(shots: Shot[]): HeatmapRow[] {
   const rows: HeatmapRow[] = SHOT_TYPES.map((shotType) => {
     const typeShots = shots.filter((s) => s.shotType === shotType);
     const cells: HeatmapCell[] = DISTANCE_KEYS.map((distance) => {
       const cellShots = typeShots.filter((s) => String(s.distance) === distance);
       const attempts = cellShots.length;
-      const successes = cellShots.filter(isHitShot).length;
       return {
         distance,
         attempts,
-        successRate: attempts > 0 ? (successes / attempts) * 100 : null,
+        successRate: outcomeRate(cellShots, isIntendedOutcome),
       };
     });
-    const attempts = typeShots.length;
-    const successes = typeShots.filter(isHitShot).length;
     return {
       shotType,
       cells,
-      overallRate: attempts > 0 ? (successes / attempts) * 100 : null,
+      overallRate: outcomeRate(typeShots, isIntendedOutcome),
     };
   }).filter((row) => row.cells.some((c) => c.attempts > 0));
 
@@ -100,22 +127,48 @@ function buildHeatmapGrid(shots: Shot[]): HeatmapRow[] {
     const cells: HeatmapCell[] = DISTANCE_KEYS.map((distance) => {
       const cellShots = shots.filter((s) => String(s.distance) === distance);
       const attempts = cellShots.length;
-      const successes = cellShots.filter(isHitShot).length;
       return {
         distance,
         attempts,
-        successRate: attempts > 0 ? (successes / attempts) * 100 : null,
+        successRate: outcomeRate(cellShots, isIntendedOutcome),
       };
     });
-    const successes = shots.filter(isHitShot).length;
     rows.push({
       shotType: 'ALL SHOTS',
       cells,
-      overallRate: (successes / shots.length) * 100,
+      overallRate: outcomeRate(shots, isIntendedOutcome),
     });
   }
 
   return rows;
+}
+
+function buildDistanceRatesForShots(shots: Shot[]): DistanceRatePoint[] {
+  return DISTANCE_KEYS.map((distance) => {
+    const cellShots = shots.filter((s) => String(s.distance) === distance);
+    const attempts = cellShots.length;
+    const label = distance.endsWith('+') ? distance : `${distance}m`;
+    return {
+      label,
+      distance,
+      attempts,
+      successRate: outcomeRate(cellShots, isIntendedOutcome),
+      sosoPlusRate: outcomeRate(cellShots, isSosoPlusOutcome),
+    };
+  }).filter((point) => point.attempts > 0);
+}
+
+function buildDistanceRatesByShotType(shots: Shot[]): ShotTypeDistanceRates[] {
+  const result: ShotTypeDistanceRates[] = [];
+  if (shots.length > 0) {
+    result.push({ shotType: 'ALL', points: buildDistanceRatesForShots(shots) });
+  }
+  for (const shotType of SHOT_TYPES) {
+    const typeShots = shots.filter((s) => s.shotType === shotType);
+    if (typeShots.length === 0) continue;
+    result.push({ shotType, points: buildDistanceRatesForShots(typeShots) });
+  }
+  return result;
 }
 
 function buildOutcomeByShotType(shots: Shot[]): OutcomeByTypeRow[] {
@@ -172,7 +225,8 @@ function computeStatsFromShots(data: AppData, player: Player, shots: Shot[]): Pl
   const outcomeCounts = initOutcomeCounts();
   const distanceMap = new Map<string, number>();
   const scoreMap = new Map<number, number>();
-  let madeShots = 0;
+  let intendedShots = 0;
+  let sosoPlusShots = 0;
   let twelveShots = 0;
   let currentScoringStreak = 0;
   let bestScoringStreak = 0;
@@ -192,12 +246,15 @@ function computeStatsFromShots(data: AppData, player: Player, shots: Shot[]): Pl
       scoreMap.set(shot.score, (scoreMap.get(shot.score) ?? 0) + 1);
     }
 
-    if (isHitShot(shot)) {
-      madeShots += 1;
+    if (isIntendedOutcome(shot)) {
+      intendedShots += 1;
       currentScoringStreak += 1;
       bestScoringStreak = Math.max(bestScoringStreak, currentScoringStreak);
     } else {
       currentScoringStreak = 0;
+    }
+    if (isSosoPlusOutcome(shot)) {
+      sosoPlusShots += 1;
     }
     if (shot.score === 12) {
       twelveShots += 1;
@@ -221,16 +278,18 @@ function computeStatsFromShots(data: AppData, player: Player, shots: Shot[]): Pl
     totalShots: shots.length,
     totalPoints,
     avgScorePerShot: scoredShotCount > 0 ? totalPoints / scoredShotCount : 0,
-    hitRate: shots.length > 0 ? (madeShots / shots.length) * 100 : 0,
+    successRate: shots.length > 0 ? (intendedShots / shots.length) * 100 : 0,
+    sosoPlusRate: shots.length > 0 ? (sosoPlusShots / shots.length) * 100 : 0,
     shotTypeCounts,
     outcomeCounts,
     distanceBuckets,
     scoreDistribution,
-    scoringRate: shots.length > 0 ? (madeShots / shots.length) * 100 : 0,
+    scoringRate: shots.length > 0 ? (intendedShots / shots.length) * 100 : 0,
     twelveRate: shots.length > 0 ? (twelveShots / shots.length) * 100 : 0,
     bestScoringStreak,
     heatmapGrid: buildHeatmapGrid(shots),
     outcomeByShotType: buildOutcomeByShotType(shots),
+    distanceRatesByShotType: buildDistanceRatesByShotType(shots),
   };
 }
 

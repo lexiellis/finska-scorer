@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Bar,
   BarChart,
@@ -9,7 +9,7 @@ import {
   YAxis,
 } from 'recharts';
 import { computeAllPlayersStats, computePlayerStats, getPlayerThrowCount } from '../stats';
-import type { AppData } from '../types';
+import type { AppData, ShotType } from '../types';
 import { OUTCOMES, SHOT_TYPES } from '../types';
 import { getOutcomeIcon } from '../outcomeDisplay';
 
@@ -38,12 +38,29 @@ function formatRate(rate: number | null): string {
 
 export function StatsPanel({ data }: StatsPanelProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedShotType, setSelectedShotType] = useState<ShotType | 'ALL'>('ALL');
 
   useEffect(() => {
     if (selectedId !== null && !data.players.some((p) => p.id === selectedId)) {
       setSelectedId(null);
     }
   }, [data.players, selectedId]);
+
+  const stats = useMemo(() => {
+    if (data.players.length === 0) return null;
+    return selectedId === null
+      ? computeAllPlayersStats(data)
+      : computePlayerStats(data, selectedId);
+  }, [data, selectedId]);
+
+  const shotTypeFilters = stats?.distanceRatesByShotType ?? [];
+
+  useEffect(() => {
+    const filters = stats?.distanceRatesByShotType ?? [];
+    if (!filters.some((s) => s.shotType === selectedShotType)) {
+      setSelectedShotType(filters[0]?.shotType ?? 'ALL');
+    }
+  }, [stats, selectedShotType]);
 
   if (data.players.length === 0) {
     return (
@@ -53,18 +70,16 @@ export function StatsPanel({ data }: StatsPanelProps) {
     );
   }
 
-  const stats =
-    selectedId === null
-      ? computeAllPlayersStats(data)
-      : computePlayerStats(data, selectedId);
+  const distanceRateSeries =
+    stats?.distanceRatesByShotType.find((s) => s.shotType === selectedShotType)?.points ?? [];
 
   const overview = data.players.map((p) => {
     const s = computePlayerStats(data, p.id)!;
     return {
       name: p.name,
       throws: s.totalShots,
-      hitRate: Math.round(s.hitRate),
-      avgScore: Number(s.avgScorePerShot.toFixed(1)),
+      successRate: Math.round(s.successRate),
+      sosoPlusRate: Math.round(s.sosoPlusRate),
     };
   });
 
@@ -112,7 +127,8 @@ export function StatsPanel({ data }: StatsPanelProps) {
               <YAxis tick={{ fontSize: 12 }} />
               <Tooltip />
               <Bar dataKey="throws" name="Throws" fill={CHART.primary} radius={[4, 4, 0, 0]} />
-              <Bar dataKey="hitRate" name="Hit %" fill={CHART.secondary} radius={[4, 4, 0, 0]} />
+              <Bar dataKey="successRate" name="Success %" fill={CHART.secondary} radius={[4, 4, 0, 0]} />
+              <Bar dataKey="sosoPlusRate" name="Soso+ %" fill={CHART.tertiary} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </section>
@@ -126,14 +142,73 @@ export function StatsPanel({ data }: StatsPanelProps) {
               <span className="stat-label">Throws</span>
             </div>
             <div className="stat-card">
-              <span className="stat-value">{Math.round(stats.hitRate)}%</span>
-              <span className="stat-label">Hit rate</span>
+              <span className="stat-value">{Math.round(stats.successRate)}%</span>
+              <span className="stat-label">Success rate</span>
+            </div>
+            <div className="stat-card">
+              <span className="stat-value">{Math.round(stats.sosoPlusRate)}%</span>
+              <span className="stat-label">Soso+ rate</span>
             </div>
           </div>
 
+          {shotTypeFilters.length > 0 && (
+            <section className="chart-card">
+              <h3>Success &amp; Soso+ by distance</h3>
+              <div className="player-chips shot-type-chips">
+                {shotTypeFilters.map((entry) => (
+                  <button
+                    key={entry.shotType}
+                    type="button"
+                    className={`chip ${selectedShotType === entry.shotType ? 'selected' : ''}`}
+                    onClick={() => setSelectedShotType(entry.shotType)}
+                  >
+                    {entry.shotType === 'ALL' ? 'All' : entry.shotType}
+                    <span className="chip-score">
+                      {entry.points.reduce((sum, p) => sum + p.attempts, 0)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              {distanceRateSeries.length > 0 ? (
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart
+                    data={distanceRateSeries.map((point) => ({
+                      label: point.label,
+                      successRate: point.successRate ?? 0,
+                      sosoPlusRate: point.sosoPlusRate ?? 0,
+                      attempts: point.attempts,
+                    }))}
+                    margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke={CHART.grid} />
+                    <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                    <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} unit="%" />
+                    <Tooltip
+                      formatter={(value) => [`${Math.round(Number(value ?? 0))}%`, undefined]}
+                    />
+                    <Bar
+                      dataKey="successRate"
+                      name="Success %"
+                      fill={CHART.secondary}
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="sosoPlusRate"
+                      name="Soso+ %"
+                      fill={CHART.tertiary}
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="empty-state">No throws for this shot type yet.</p>
+              )}
+            </section>
+          )}
+
           {stats.heatmapGrid.length > 0 && (
             <section className="chart-card">
-              <h3>Hit rate by shot type &amp; distance</h3>
+              <h3>Success rate by shot type &amp; distance</h3>
               <div className="heatmap-wrap">
                 <table className="heatmap-table">
                   <thead>
