@@ -14,6 +14,7 @@ import {
   type SyncStatus,
 } from '../storage';
 import {
+  getNextThrowPlayer,
   getTeamForPlayer,
   isMissOutcome,
   recomputeGameState,
@@ -130,10 +131,12 @@ export function useAppData() {
   const startGame = useCallback((teams: Team[]) => {
     if (teams.length < 2 || teams.some((t) => t.playerIds.length < 1)) return null;
     const scores = Object.fromEntries(teams.map((t) => [t.id, 0]));
+    const isFfa = teams.every((t) => t.playerIds.length === 1);
     const game: Game = {
       id: createId(),
       mode: 'game',
       teams,
+      throwOrder: isFfa ? teams.flatMap((t) => t.playerIds) : undefined,
       scores,
       eliminatedTeamIds: [],
       winnerTeamId: null,
@@ -156,6 +159,7 @@ export function useAppData() {
       id: createId(),
       mode: 'stats',
       teams,
+      throwOrder: [...playerIds],
       scores,
       eliminatedTeamIds: [],
       winnerTeamId: null,
@@ -207,6 +211,7 @@ export function useAppData() {
       let scoreEvent: ReturnType<typeof applyFinskaScore>['event'] | 'miss_loss' = 'normal';
       let newScore: number | null = null;
       let missStreak = 0;
+      let nextPlayerId: string | null = null;
 
       update((prev) => {
         const game = prev.games.find((g) => g.id === params.gameId);
@@ -233,11 +238,14 @@ export function useAppData() {
           scoreAfter: scoreBefore,
         };
 
+        const allShots = [...prev.shots, shot];
+        nextPlayerId = getNextThrowPlayer(game, allShots, params.playerId);
+
         if (isStats) {
           resultShot = shot;
           return {
             ...prev,
-            shots: [...prev.shots, shot],
+            shots: allShots,
           };
         }
 
@@ -252,7 +260,6 @@ export function useAppData() {
         }
 
         resultShot = shot;
-        const allShots = [...prev.shots, shot];
         const state = recomputeGameState(game, allShots);
 
         if (state.endReason === 'three_misses') {
@@ -281,7 +288,7 @@ export function useAppData() {
         };
       });
 
-      return { shot: resultShot, event: scoreEvent, newScore, missStreak };
+      return { shot: resultShot, event: scoreEvent, newScore, missStreak, nextPlayerId };
     },
     [update],
   );

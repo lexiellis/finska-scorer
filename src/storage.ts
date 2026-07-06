@@ -27,6 +27,18 @@ function migrateOutcome(outcome: string): Outcome {
   return outcome as Outcome;
 }
 
+function migrateThrowOrder(game: Game): string[] | undefined {
+  if (game.throwOrder?.length) return game.throwOrder;
+  const teams = game.teams ?? [];
+  if (game.mode === 'stats') {
+    return teams.flatMap((t) => t.playerIds);
+  }
+  if (teams.length > 0 && teams.every((t) => t.playerIds.length === 1)) {
+    return teams.flatMap((t) => t.playerIds);
+  }
+  return undefined;
+}
+
 function migrateGame(raw: Game, players: Player[]): Game {
   const storedMode = (raw as { mode?: string }).mode;
   const endedAt =
@@ -36,13 +48,14 @@ function migrateGame(raw: Game, players: Player[]): Game {
   const mode = storedMode === 'stats' ? 'stats' : 'game';
 
   if (raw.teams?.length) {
-    return {
+    const migrated: Game = {
       ...raw,
       mode,
       endedAt,
       eliminatedTeamIds: raw.eliminatedTeamIds ?? [],
       winnerTeamId: raw.winnerTeamId ?? null,
     };
+    return { ...migrated, throwOrder: migrateThrowOrder(migrated) };
   }
 
   const legacyIds = raw.playerIds ?? [];
@@ -58,7 +71,7 @@ function migrateGame(raw: Game, players: Player[]): Game {
     scores[t.id] = raw.scores?.[pid] ?? raw.scores?.[t.id] ?? 0;
   }
 
-  return {
+  const migrated: Game = {
     ...raw,
     mode,
     teams,
@@ -68,6 +81,7 @@ function migrateGame(raw: Game, players: Player[]): Game {
     endedAt,
     startedAt: raw.startedAt,
   };
+  return { ...migrated, throwOrder: migrateThrowOrder(migrated) };
 }
 
 function migrate(data: AppData): AppData {

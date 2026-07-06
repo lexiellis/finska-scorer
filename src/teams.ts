@@ -30,6 +30,14 @@ export function getActivePlayerIds(game: Game): string[] {
   return getActiveTeams(game).flatMap((t) => t.playerIds);
 }
 
+function getActiveThrowOrder(game: Game): string[] {
+  const activeIds = new Set(getActivePlayerIds(game));
+  if (game.throwOrder?.length) {
+    return game.throwOrder.filter((id) => activeIds.has(id));
+  }
+  return getActiveTeams(game).flatMap((t) => t.playerIds);
+}
+
 export function getGameShots(game: Game, shots: Shot[]): Shot[] {
   return shots
     .filter((s) => s.gameId === game.id)
@@ -37,8 +45,8 @@ export function getGameShots(game: Game, shots: Shot[]): Shot[] {
 }
 
 export function getFirstThrowPlayer(game: Game): string | null {
-  const team = getActiveTeams(game)[0];
-  return team?.playerIds[0] ?? null;
+  const order = getActiveThrowOrder(game);
+  return order[0] ?? null;
 }
 
 /** Teams alternate each throw; within a team, players rotate in order. */
@@ -47,6 +55,15 @@ export function getNextThrowPlayer(
   shots: Shot[],
   lastPlayerId: string | null,
 ): string | null {
+  if (game.throwOrder?.length) {
+    const order = getActiveThrowOrder(game);
+    if (order.length === 0) return null;
+    if (!lastPlayerId) return order[0] ?? null;
+    const idx = order.indexOf(lastPlayerId);
+    const nextIdx = idx < 0 ? 0 : (idx + 1) % order.length;
+    return order[nextIdx] ?? null;
+  }
+
   const activeTeams = getActiveTeams(game);
   if (activeTeams.length === 0) return null;
 

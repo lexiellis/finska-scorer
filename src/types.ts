@@ -63,6 +63,8 @@ export interface Game {
   id: string;
   mode: GameMode;
   teams: Team[];
+  /** Player ids in throw rotation order (stats sessions and FFA games). */
+  throwOrder?: string[];
   scores: Record<string, number>;
   eliminatedTeamIds: string[];
   winnerTeamId: string | null;

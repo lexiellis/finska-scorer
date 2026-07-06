@@ -189,6 +189,7 @@ export function importLogCsv(
     id: sessionId,
     mode: 'stats',
     teams,
+    throwOrder: teamPlayerIds,
     scores: Object.fromEntries(teams.map((t) => [t.id, 0])),
     eliminatedTeamIds: [],
     winnerTeamId: null,

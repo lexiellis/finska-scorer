@@ -20,6 +20,7 @@ interface LogShotResult {
   event: 'normal' | 'bust' | 'win' | 'miss_loss';
   newScore: number | null;
   missStreak: number;
+  nextPlayerId: string | null;
 }
 
 interface GamePanelProps {
@@ -71,17 +72,26 @@ export function GamePanel({
     : null;
 
   useEffect(() => {
-    if (activeGame) {
-      const activeIds = getActivePlayerIds(activeGame);
-      if (!activePlayerId || !activeIds.includes(activePlayerId)) {
-        const gameShots = getGameShots(activeGame, data.shots);
-        const lastShot = gameShots[gameShots.length - 1];
-        setActivePlayerId(
-          lastShot
-            ? getNextThrowPlayer(activeGame, data.shots, lastShot.playerId)
-            : getFirstThrowPlayer(activeGame),
-        );
-      }
+    if (!activeGame) {
+      if (!completedGameId) setActivePlayerId(null);
+      return;
+    }
+
+    const gameShots = getGameShots(activeGame, data.shots);
+    const activeIds = getActivePlayerIds(activeGame);
+
+    if (gameShots.length === 0) {
+      setActivePlayerId(getFirstThrowPlayer(activeGame));
+      return;
+    }
+
+    if (!activePlayerId || !activeIds.includes(activePlayerId)) {
+      const lastShot = gameShots[gameShots.length - 1];
+      setActivePlayerId(
+        lastShot
+          ? getNextThrowPlayer(activeGame, data.shots, lastShot.playerId)
+          : getFirstThrowPlayer(activeGame),
+      );
     }
     if (!activeGame && !completedGameId) {
       setShowEndMenu(false);
@@ -136,7 +146,7 @@ export function GamePanel({
     const teamLabel = team ? teamDisplayName(team, data.players) : 'Team';
     const isStats = isStatsSession(activeGame);
 
-    const { event, newScore, missStreak } = onLogShot({
+    const { event, newScore, missStreak, nextPlayerId } = onLogShot({
       gameId: activeGame.id,
       playerId: activePlayerId,
       shotType,
@@ -172,8 +182,8 @@ export function GamePanel({
 
     if (!isStats && (event === 'win' || event === 'miss_loss')) {
       setCompletedGameId(activeGame.id);
-    } else {
-      setActivePlayerId(getNextThrowPlayer(activeGame, data.shots, activePlayerId));
+    } else if (nextPlayerId) {
+      setActivePlayerId(nextPlayerId);
     }
   };
 
