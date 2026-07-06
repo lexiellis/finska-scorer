@@ -3,6 +3,7 @@ import type { AppData, Distance, Game, Outcome, Player, Shot, ShotType } from '.
 import { DISTANCES, OUTCOMES, SHOT_TYPES } from './types';
 
 export function formatDistanceLabel(distance: Distance): string {
+  if (distance === '12+') return '12m';
   return typeof distance === 'string' ? distance : `${distance}m`;
 }
 

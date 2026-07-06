@@ -99,7 +99,7 @@ export function GamePanel({
   }, [activeGame, activePlayerId, completedGameId, data.shots]);
 
   useEffect(() => {
-    if (shotType === '12 Break' && distance !== 3) {
+    if (shotType === 'Break' && distance !== 3) {
       setDistance(3);
     }
   }, [distance, shotType]);

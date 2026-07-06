@@ -1,6 +1,6 @@
 export const SHOT_TYPES = [
   'Standard',
-  '12 Break',
+  'Break',
   'Inertia',
   'Retro',
   'Elephant',
@@ -13,7 +13,7 @@ export const SHOT_TYPES = [
 
 export type ShotType = (typeof SHOT_TYPES)[number];
 
-export const DISTANCES = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, '12+'] as const;
+export const DISTANCES = [3, 4, 5, 6, 7, 8, 9, 10, 11, '12+'] as const;
 
 export type Distance = (typeof DISTANCES)[number];
 

@@ -142,6 +142,7 @@
 .shot-log {
   --log-btn-min: clamp(40px, 5.5vh, 48px);
   --log-btn-radius: 18px;
+  --log-btn-gap: 2px;
   /* Section height shares — proportional to button rows + tap target needs */
   --section-type-weight: 2.15;
   --section-distance-weight: 3.2;
@@ -263,8 +264,19 @@
 }
 
 .score-bubble-status-icon {
-  font-size: 0.84em;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1.15em;
+  height: 1.15em;
+  color: var(--primary);
   line-height: 1;
+}
+
+.score-bubble-status-icon svg {
+  width: 100%;
+  height: 100%;
 }
 
 .score-bubble-total {
@@ -490,7 +502,7 @@
 
 .btn-grid {
   display: grid;
-  gap: clamp(0.2rem, 0.6vh, 0.4rem);
+  gap: var(--log-btn-gap, 2px);
   grid-auto-rows: minmax(0, 1fr);
   align-content: stretch;
   width: 100%;
@@ -577,8 +589,7 @@
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   grid-template-rows: repeat(3, minmax(0, 1fr));
-  row-gap: clamp(0.12rem, 0.35vh, 0.22rem);
-  column-gap: clamp(0.24rem, 0.75vh, 0.45rem);
+  gap: var(--log-btn-gap);
   align-content: start;
   align-items: stretch;
   justify-items: stretch;
@@ -678,7 +689,7 @@
   flex-shrink: 0;
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: clamp(0.25rem, 0.8vh, 0.5rem);
+  gap: var(--log-btn-gap, 2px);
   padding-top: 0;
   min-height: clamp(44px, 7vh, 56px);
   align-items: stretch;
@@ -688,7 +699,7 @@
   display: flex;
   align-items: stretch;
   align-self: center;
-  gap: clamp(0.25rem, 0.8vh, 0.4rem);
+  gap: var(--log-btn-gap, 2px);
 }
 
 .log-btn {
@@ -1094,6 +1105,15 @@
 
 .btn.primary:hover:not(:disabled) {
   background: var(--primary-hover);
+}
+
+.btn.dark {
+  background: var(--text);
+  color: var(--text-on-dark);
+}
+
+.btn.dark:hover:not(:disabled) {
+  background: #11161c;
 }
 
 .btn.secondary {
@@ -1663,7 +1683,7 @@
 .shot-log .score-bubbles {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.55rem;
+  gap: var(--log-btn-gap);
 }
 
 .shot-log .score-bubble {
@@ -1696,8 +1716,8 @@
   margin-top: 0.12rem;
   width: 100%;
   text-align: center;
-  font-size: clamp(2.55rem, 9.8vw, 3.55rem);
-  line-height: 0.92;
+  font-size: clamp(3.1rem, 12.5vw, 4.5rem);
+  line-height: 0.9;
 }
 
 .shot-log .score-bubble.active {
@@ -1765,7 +1785,7 @@
 }
 
 .shot-log .btn-grid {
-  gap: clamp(0.36rem, 1vh, 0.56rem);
+  gap: var(--log-btn-gap);
 }
 
 .shot-log .pick-btn {
@@ -1784,8 +1804,7 @@
 }
 
 .shot-log .score-grid {
-  row-gap: clamp(0.1rem, 0.32vh, 0.2rem);
-  column-gap: clamp(0.36rem, 1vh, 0.56rem);
+  gap: var(--log-btn-gap);
 }
 
 .shot-log .score-btn {
@@ -1796,7 +1815,7 @@
 }
 
 .shot-log .log-footer {
-  gap: 0.45rem;
+  gap: var(--log-btn-gap);
   margin-bottom: clamp(0.2rem, 0.8vh, 0.45rem);
 }
 

@@ -76,6 +76,7 @@ function parseDistance(raw: string): Distance | null {
   }
   const n = Number(trimmed.replace(/m$/i, ''));
   if (!Number.isFinite(n)) return null;
+  if (n === 12) return '12+';
   return DISTANCES.includes(n as Distance) ? (n as Distance) : null;
 }
 
@@ -85,7 +86,8 @@ function normalizeOutcome(raw: string): Outcome | null {
 }
 
 function normalizeShotType(raw: string): ShotType | null {
-  return SHOT_TYPES.includes(raw as ShotType) ? (raw as ShotType) : null;
+  const mapped = raw === '12 Break' ? 'Break' : raw;
+  return SHOT_TYPES.includes(mapped as ShotType) ? (mapped as ShotType) : null;
 }
 
 function scoreFromRow(_hit: string, _outcome: Outcome): number | null {

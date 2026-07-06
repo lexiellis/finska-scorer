@@ -1,7 +1,8 @@
 import { useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+import { ActivePlayerIcon } from './ActivePlayerIcon';
 import { FINSKA_TARGET } from '../scoring';
 import { getOutcomeIcon, OUTCOME_BUTTON_LABELS } from '../outcomeDisplay';
-import { isHitShot } from '../stats';
+import { isHitShot, formatDistanceLabel } from '../stats';
 import { getGameShots, isStatsSession, teamDisplayName } from '../teams';
 import type { AppData, Distance, Game, Outcome, Shot, ShotType } from '../types';
 import { DISTANCES, OUTCOMES, SHOT_TYPES } from '../types';
@@ -58,9 +59,7 @@ function ShotInfoCell({
       </div>
       <div className="history-line">
         <span className="history-ico">📏</span>
-        <span className="history-val">
-          {typeof shot.distance === 'string' ? shot.distance : `${shot.distance}m`}
-        </span>
+        <span className="history-val">{formatDistanceLabel(shot.distance)}</span>
       </div>
       <div className="history-line">
         <span className="history-ico outcome-icon" aria-hidden>
@@ -94,7 +93,7 @@ function ShotEditForm({
   onSave: () => void;
   onCancel: () => void;
 }) {
-  const isDistanceLocked = draft.shotType === '12 Break';
+  const isDistanceLocked = draft.shotType === 'Break';
 
   return (
     <div className="history-edit-grid" onClick={(e) => e.stopPropagation()}>
@@ -107,7 +106,7 @@ function ShotEditForm({
               ? {
                   ...prev,
                   shotType: e.target.value as ShotType,
-                  distance: e.target.value === '12 Break' ? 3 : prev.distance,
+                  distance: e.target.value === 'Break' ? 3 : prev.distance,
                 }
               : prev,
           )
@@ -135,7 +134,7 @@ function ShotEditForm({
       >
         {DISTANCES.map((v) => (
           <option key={String(v)} value={String(v)}>
-            {typeof v === 'string' ? v : `${v}m`}
+            {formatDistanceLabel(v)}
           </option>
         ))}
       </select>
@@ -238,7 +237,7 @@ export function ScoreBoard({
               <span className="score-bubble-name">
                 {isActive && (
                   <span className="score-bubble-status-icon" aria-hidden>
-                    🎯
+                    <ActivePlayerIcon />
                   </span>
                 )}
                 {name}
@@ -284,7 +283,7 @@ export function ScoreBoard({
                 <span className="score-bubble-name">
                   {isActive && (
                     <span className="score-bubble-status-icon" aria-hidden>
-                      🎯
+                      <ActivePlayerIcon />
                     </span>
                   )}
                   {name}
