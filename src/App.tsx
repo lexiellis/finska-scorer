@@ -37,10 +37,27 @@ export default function App() {
   return (
     <div className={`app ${loggingActive ? 'app--logging' : ''}`}>
       <header className="app-header">
-        <h1>{loggingActive ? '🎯 Finska Scorer' : 'Finska Scorer'}</h1>
-        {!loggingActive && (
-          <p className="app-tagline">Log every throw. Throw every log.</p>
-        )}
+        <div className="app-header-brand">
+          <h1>{loggingActive ? '🎯 Finska Scorer' : 'Finska Scorer'}</h1>
+          {!loggingActive && (
+            <p className="app-tagline">Log every throw. Throw every log.</p>
+          )}
+        </div>
+        <nav className="header-tab-bar" aria-label="Main navigation">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              className={`tab-btn ${tab === t.id ? 'active' : ''}`}
+              onClick={() => setTab(t.id)}
+            >
+              <span className="tab-icon" aria-hidden>
+                {t.icon}
+              </span>
+              <span className="tab-label">{t.label}</span>
+            </button>
+          ))}
+        </nav>
       </header>
 
       <main className={`app-main ${loggingActive ? 'app-main--log' : ''}`}>
@@ -69,22 +86,6 @@ export default function App() {
           />
         )}
       </main>
-
-      <nav className="tab-bar" aria-label="Main navigation">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            className={`tab-btn ${tab === t.id ? 'active' : ''}`}
-            onClick={() => setTab(t.id)}
-          >
-            <span className="tab-icon" aria-hidden>
-              {t.icon}
-            </span>
-            <span>{t.label}</span>
-          </button>
-        ))}
-      </nav>
     </div>
   );
 }

@@ -11,7 +11,7 @@ The log form fills one screen on phone/tablet. **Do not assign arbitrary `fr` ro
 ## Rules
 
 1. **Flex-grow weights** on `.log-section--type|distance|score|outcome` must reflect actual button rows and tap-target needs (see `--section-*-weight` on `.shot-log`).
-2. **Shot type** — 10 buttons, 5 cols → 2 rows → lowest weight.
+2. **Shot type** — 10 buttons, 5 cols → 2 rows → weight matches outcome (2 rows).
 3. **Distance** — 11 buttons; 4 cols × 3 rows on narrow phones, 6 cols × 2 rows from 520px → highest non-score weight.
 4. **Score** — 13-button custom grid (3 rows) → largest weight.
 5. **Outcome** — 6 buttons, 3 cols → 2 rows → medium weight.

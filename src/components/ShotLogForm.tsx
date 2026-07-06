@@ -133,7 +133,7 @@ export function ShotLogForm({
               <button
                 key={t}
                 type="button"
-                className={`pick-btn ${shotType === t ? 'selected' : ''}`}
+                className={`pick-btn pick-btn--compact ${shotType === t ? 'selected' : ''}`}
                 onClick={() => onShotType(t)}
               >
                 {t}
