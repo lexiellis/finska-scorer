@@ -1,5 +1,4 @@
 import { useMemo, useState, type Dispatch, type SetStateAction } from 'react';
-import { ActivePlayerIcon } from './ActivePlayerIcon';
 import { FINSKA_TARGET } from '../scoring';
 import { getOutcomeIcon, OUTCOME_BUTTON_LABELS } from '../outcomeDisplay';
 import { isHitShot, formatDistanceLabel } from '../stats';
@@ -19,6 +18,8 @@ interface ScoreBoardProps {
     patch: { shotType: ShotType; distance: Distance; score: number; outcome: Outcome },
   ) => void;
 }
+
+const ACTIVE_PLAYER_ICON = '🫴';
 
 function getUpcomingPlayerForTeam(teamShots: Shot[], team: { playerIds: string[] }): string | null {
   const playerIndex = teamShots.length % team.playerIds.length;
@@ -237,7 +238,7 @@ export function ScoreBoard({
               <span className="score-bubble-name">
                 {isActive && (
                   <span className="score-bubble-status-icon" aria-hidden>
-                    <ActivePlayerIcon />
+                    {ACTIVE_PLAYER_ICON}
                   </span>
                 )}
                 {name}
@@ -263,16 +264,6 @@ export function ScoreBoard({
   return (
     <div className="score-board-expanded">
       <div className="score-board-expanded-layout">
-        <div className="score-board-row-gutter">
-          <span className="score-board-gutter-head" aria-hidden />
-          {Array.from({ length: rowCount }, (_, rowIndex) => (
-            <span key={rowIndex} className="score-board-gutter-row">
-              {rowIndex + 1}
-            </span>
-          ))}
-          <span className="score-board-gutter-foot" aria-hidden />
-        </div>
-
         <div className="score-bubbles score-bubbles--expanded">
           {teamMeta.map(({ team, total, eliminated, isActive, name, teamThrowList }) => (
             <div
@@ -283,7 +274,7 @@ export function ScoreBoard({
                 <span className="score-bubble-name">
                   {isActive && (
                     <span className="score-bubble-status-icon" aria-hidden>
-                      <ActivePlayerIcon />
+                      {ACTIVE_PLAYER_ICON}
                     </span>
                   )}
                   {name}

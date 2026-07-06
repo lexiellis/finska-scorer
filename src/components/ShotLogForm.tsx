@@ -76,7 +76,11 @@ export function ShotLogForm({
       setShowHistory(false);
       return;
     }
-    if (canLog) onLog();
+    if (canLog) {
+      onLog();
+      openHistory();
+      return;
+    }
     else openHistory();
   };
 
