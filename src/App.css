@@ -149,7 +149,7 @@
   --section-score-weight: 3.4;
   --section-outcome-weight: 2.15;
   --distance-cols: 4;
-  --distance-rows: 3;
+  --distance-rows: 2;
   position: relative;
   flex: 1;
   min-height: 0;
@@ -163,8 +163,6 @@
   .shot-log {
     --section-type-weight: 2.75;
     --section-distance-weight: 2.75;
-    --distance-cols: 6;
-    --distance-rows: 2;
   }
 }
 
