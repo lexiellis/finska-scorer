@@ -14,6 +14,7 @@ import {
   type SyncStatus,
 } from '../storage';
 import {
+  buildThrowOrder,
   getNextThrowPlayer,
   getTeamForPlayer,
   isMissOutcome,
@@ -61,6 +62,7 @@ export function useAppData() {
             nextSync = { ...nextSync, remoteRowFound: true };
           } else if (remote.status === 'empty') {
             nextSync = { ...nextSync, remoteRowFound: false };
+            // Keep local data — first save will create this device's row.
           } else if (remote.status === 'error') {
             nextSync = { ...nextSync, error: remote.message };
           }
@@ -81,7 +83,7 @@ export function useAppData() {
         setImportDataVersion(IMPORT_DATA_VERSION);
       }
 
-      setSyncStatus(nextSync);
+      setSyncStatus({ ...nextSync, deviceId: nextSync.deviceId });
       setData(imported.data);
       setIsHydrated(true);
     }
@@ -131,12 +133,11 @@ export function useAppData() {
   const startGame = useCallback((teams: Team[]) => {
     if (teams.length < 2 || teams.some((t) => t.playerIds.length < 1)) return null;
     const scores = Object.fromEntries(teams.map((t) => [t.id, 0]));
-    const isFfa = teams.every((t) => t.playerIds.length === 1);
     const game: Game = {
       id: createId(),
       mode: 'game',
       teams,
-      throwOrder: isFfa ? teams.flatMap((t) => t.playerIds) : undefined,
+      throwOrder: buildThrowOrder(teams),
       scores,
       eliminatedTeamIds: [],
       winnerTeamId: null,

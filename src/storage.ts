@@ -1,9 +1,10 @@
 import type { AppData, Distance, Game, Outcome, Player, ShotType } from './types';
+import { buildThrowOrder } from './teams';
 import { createClient } from '@supabase/supabase-js';
 
 const STORAGE_KEY = 'finska-scorer-data';
 const IMPORT_VERSION_KEY = 'finska-import-version';
-const SHARED_STATE_ID = 'global';
+const DEVICE_ID_KEY = 'finska-device-id';
 const SUPABASE_TABLE = 'app_state';
 
 type SupabaseStateRow = {
@@ -36,13 +37,8 @@ function migrateOutcome(outcome: string): Outcome {
 function migrateThrowOrder(game: Game): string[] | undefined {
   if (game.throwOrder?.length) return game.throwOrder;
   const teams = game.teams ?? [];
-  if (game.mode === 'stats') {
-    return teams.flatMap((t) => t.playerIds);
-  }
-  if (teams.length > 0 && teams.every((t) => t.playerIds.length === 1)) {
-    return teams.flatMap((t) => t.playerIds);
-  }
-  return undefined;
+  if (teams.length === 0) return undefined;
+  return buildThrowOrder(teams);
 }
 
 function migrateGame(raw: Game, players: Player[]): Game {
@@ -148,9 +144,27 @@ export type SaveResult =
 
 export interface SyncStatus {
   mode: StorageMode;
+  deviceId: string;
   remoteRowFound: boolean | null;
   lastSaveOk: boolean | null;
   error: string | null;
+}
+
+/** Stable id for this browser — each phone gets its own Supabase row. */
+export function getDeviceId(): string {
+  try {
+    const existing = localStorage.getItem(DEVICE_ID_KEY);
+    if (existing) return existing;
+    const id = createId();
+    localStorage.setItem(DEVICE_ID_KEY, id);
+    return id;
+  } catch {
+    return 'local-fallback';
+  }
+}
+
+function getDeviceStateId(): string {
+  return getDeviceId();
 }
 
 export function getStorageMode(): StorageMode {
@@ -160,6 +174,7 @@ export function getStorageMode(): StorageMode {
 export function initialSyncStatus(): SyncStatus {
   return {
     mode: getStorageMode(),
+    deviceId: getDeviceId(),
     remoteRowFound: null,
     lastSaveOk: null,
     error: null,
@@ -211,15 +226,17 @@ export async function loadRemoteData(): Promise<RemoteLoadResult> {
     return { status: 'disabled' };
   }
 
+  const deviceId = getDeviceStateId();
+
   const { data, error } = await supabase
     .from(SUPABASE_TABLE)
     .select('id, data')
-    .eq('id', SHARED_STATE_ID)
+    .eq('id', deviceId)
     .maybeSingle<SupabaseStateRow>();
 
   if (error) {
     const message = error.message;
-    console.error('Failed to load shared app data from Supabase:', message);
+    console.error('Failed to load device app data from Supabase:', message);
     return { status: 'error', message };
   }
 
@@ -237,9 +254,11 @@ export async function saveData(data: AppData): Promise<SaveResult> {
     return { ok: true, skipped: true };
   }
 
+  const deviceId = getDeviceStateId();
+
   const { error } = await supabase.from(SUPABASE_TABLE).upsert(
     {
-      id: SHARED_STATE_ID,
+      id: deviceId,
       data,
       updated_at: new Date().toISOString(),
     },
@@ -248,7 +267,7 @@ export async function saveData(data: AppData): Promise<SaveResult> {
 
   if (error) {
     const message = error.message;
-    console.error('Failed to save shared app data to Supabase:', message);
+    console.error('Failed to save device app data to Supabase:', message);
     return { ok: false, message };
   }
 

@@ -2,7 +2,7 @@ import { useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 import { FINSKA_TARGET } from '../scoring';
 import { getOutcomeIcon, OUTCOME_BUTTON_LABELS } from '../outcomeDisplay';
 import { isHitShot, formatDistanceLabel } from '../stats';
-import { getGameShots, isStatsSession, teamDisplayName } from '../teams';
+import { getGameShots, getPlayerName, isStatsSession, teamDisplayName } from '../teams';
 import type { AppData, Distance, Game, Outcome, Shot, ShotType } from '../types';
 import { DISTANCES, OUTCOMES, SHOT_TYPES } from '../types';
 
@@ -45,15 +45,23 @@ function teamBubbleClass(isActive: boolean, eliminated: boolean, total: number):
 
 function ShotInfoCell({
   shot,
+  playerName,
   isMiss,
   isBust,
 }: {
   shot: { shotType: string; distance: Distance; outcome: Outcome };
+  playerName?: string;
   isMiss: boolean;
   isBust: boolean;
 }) {
   return (
     <div className="history-symbol-cell">
+      {playerName && (
+        <div className="history-line history-line--player">
+          <span className="history-ico">🫴</span>
+          <span className="history-val">{playerName}</span>
+        </div>
+      )}
       <div className="history-line">
         <span className="history-ico">🎯</span>
         <span className="history-val">{shot.shotType}</span>
@@ -214,6 +222,8 @@ export function ScoreBoard({
     const throwCount = teamThrowList.length;
     const upcomingId = eliminated ? null : getUpcomingPlayerForTeam(teamThrowList, team);
     const isActive = upcomingId !== null && activePlayerId === upcomingId;
+    const upcomingName = upcomingId ? getPlayerName(players, upcomingId) : null;
+    const multiPlayerTeam = team.playerIds.length > 1;
 
     return {
       team,
@@ -221,6 +231,8 @@ export function ScoreBoard({
       throwCount,
       eliminated,
       isActive,
+      upcomingName,
+      multiPlayerTeam,
       teamThrowList,
       name: teamDisplayName(team, players),
     };
@@ -230,7 +242,7 @@ export function ScoreBoard({
     return (
       <div className="score-header">
         <div className="score-bubbles">
-          {teamMeta.map(({ team, total, throwCount, eliminated, isActive, name }) => (
+          {teamMeta.map(({ team, total, throwCount, eliminated, isActive, name, upcomingName, multiPlayerTeam }) => (
             <div
               key={team.id}
               className={teamBubbleClass(isActive, eliminated, isStats ? 0 : total)}
@@ -241,8 +253,11 @@ export function ScoreBoard({
                     {ACTIVE_PLAYER_ICON}
                   </span>
                 )}
-                {name}
+                {isActive && multiPlayerTeam && upcomingName ? upcomingName : name}
               </span>
+              {isActive && multiPlayerTeam && (
+                <span className="score-bubble-team-hint">{name}</span>
+              )}
               <span className="score-bubble-total">
                 {isStats ? throwCount : total}
               </span>
@@ -265,7 +280,7 @@ export function ScoreBoard({
     <div className="score-board-expanded">
       <div className="score-board-expanded-layout">
         <div className="score-bubbles score-bubbles--expanded">
-          {teamMeta.map(({ team, total, eliminated, isActive, name, teamThrowList }) => (
+          {teamMeta.map(({ team, total, eliminated, isActive, name, teamThrowList, upcomingName, multiPlayerTeam }) => (
             <div
               key={team.id}
               className={`${teamBubbleClass(isActive, eliminated, total)} score-bubble--column`}
@@ -277,8 +292,11 @@ export function ScoreBoard({
                       {ACTIVE_PLAYER_ICON}
                     </span>
                   )}
-                  {name}
+                  {isActive && multiPlayerTeam && upcomingName ? upcomingName : name}
                 </span>
+                {isActive && multiPlayerTeam && (
+                  <span className="score-bubble-team-hint">{name}</span>
+                )}
               </div>
 
               <div className="score-bubble-column-rows">
@@ -360,7 +378,12 @@ export function ScoreBoard({
                         {formatPins(shot.score)}
                       </div>
                       <div className="score-bubble-row-shot">
-                        <ShotInfoCell shot={shot} isMiss={isMiss} isBust={isBust} />
+                        <ShotInfoCell
+                          shot={shot}
+                          playerName={getPlayerName(players, shot.playerId)}
+                          isMiss={isMiss}
+                          isBust={isBust}
+                        />
                       </div>
                     </div>
                   );

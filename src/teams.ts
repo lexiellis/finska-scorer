@@ -38,6 +38,36 @@ function getActiveThrowOrder(game: Game): string[] {
   return getActiveTeams(game).flatMap((t) => t.playerIds);
 }
 
+/** Flat throw rotation: teams alternate, players rotate within each team. */
+export function buildThrowOrder(teams: Team[]): string[] {
+  if (teams.length === 0) return [];
+  const teamShotCounts = Object.fromEntries(teams.map((t) => [t.id, 0]));
+  const order: string[] = [];
+  let lastTeamIdx = teams.length - 1;
+  const maxIterations = 600;
+
+  for (let i = 0; i < maxIterations; i++) {
+    const nextTeamIdx = (lastTeamIdx + 1) % teams.length;
+    const team = teams[nextTeamIdx]!;
+    const count = teamShotCounts[team.id] ?? 0;
+    const playerIdx = count % team.playerIds.length;
+    const playerId = team.playerIds[playerIdx];
+    if (!playerId) break;
+    order.push(playerId);
+    teamShotCounts[team.id] = count + 1;
+    lastTeamIdx = nextTeamIdx;
+  }
+
+  return order;
+}
+
+export function getPlayerName(
+  players: { id: string; name: string }[],
+  playerId: string,
+): string {
+  return players.find((p) => p.id === playerId)?.name ?? 'Player';
+}
+
 export function getGameShots(game: Game, shots: Shot[]): Shot[] {
   return shots
     .filter((s) => s.gameId === game.id)

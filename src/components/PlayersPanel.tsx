@@ -20,28 +20,30 @@ function syncStatusClass(sync: SyncStatus): string {
 }
 
 function syncStatusMessage(sync: SyncStatus, playerCount: number, shotCount: number): string {
+  const shortId = sync.deviceId.slice(0, 8);
+
   if (sync.mode === 'local') {
-    return 'Storage: this device only (browser localStorage). Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY on Vercel, then redeploy, to use your app_state table.';
+    return `This device only — data stays in this browser (id ${shortId}…).`;
   }
 
   if (sync.error) {
-    return `Supabase sync error: ${sync.error}. Run the SQL in supabase/schema.sql (RLS policies for anon read/write).`;
+    return `Backup error: ${sync.error}. Data is still saved on this device.`;
   }
 
   if (sync.lastSaveOk === false) {
-    return 'Could not save to Supabase. Check that row-level security policies allow anon insert/update on app_state.';
+    return 'Could not back up to Supabase. Data is still saved on this device.';
   }
 
   const summary = `${playerCount} players, ${shotCount} throws`;
   if (sync.lastSaveOk) {
-    return `Supabase sync active — app_state row id "global" (${summary}).`;
+    return `This device (${shortId}…) — ${summary}. Each phone keeps its own data.`;
   }
 
   if (sync.remoteRowFound === false) {
-    return `Supabase connected — no row yet; saving ${summary} on first load…`;
+    return `This device (${shortId}…) — backing up ${summary}…`;
   }
 
-  return `Supabase connected — loading shared data…`;
+  return `This device (${shortId}…) — loading backup…`;
 }
 
 export function PlayersPanel({

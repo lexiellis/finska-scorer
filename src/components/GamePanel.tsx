@@ -13,6 +13,7 @@ import {
 } from '../teams';
 import type { AppData, Distance, Game, Outcome, ShotType, Team } from '../types';
 import { SessionSetup } from './SessionSetup';
+import { SessionHistory } from './SessionHistory';
 import { ShotLogForm } from './ShotLogForm';
 
 interface LogShotResult {
@@ -66,6 +67,7 @@ export function GamePanel({
   const [flashKind, setFlashKind] = useState<'info' | 'bust' | 'win' | 'danger'>('info');
   const [completedGameId, setCompletedGameId] = useState<string | null>(null);
   const [showEndMenu, setShowEndMenu] = useState(false);
+  const [viewingSessionHistory, setViewingSessionHistory] = useState(false);
 
   const completedGame = completedGameId
     ? data.games.find((g) => g.id === completedGameId)
@@ -258,11 +260,20 @@ export function GamePanel({
         {data.players.length === 0 ? (
           <p className="empty-state">Add players first.</p>
         ) : (
-          <SessionSetup
-            players={data.players}
-            onStartGame={onStartGame}
-            onStartStatsSession={onStartStatsSession}
-          />
+          <>
+            <SessionHistory
+              data={data}
+              onDetailOpenChange={setViewingSessionHistory}
+              onUpdateShot={onUpdateShot}
+            />
+            {!viewingSessionHistory && (
+              <SessionSetup
+                players={data.players}
+                onStartGame={onStartGame}
+                onStartStatsSession={onStartStatsSession}
+              />
+            )}
+          </>
         )}
       </div>
     );

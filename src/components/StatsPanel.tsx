@@ -9,7 +9,17 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { computeAllPlayersStats, computePlayerStats, getPlayerThrowCount } from '../stats';
+import {
+  computeAllPlayersStats,
+  computePlayerStats,
+  computeSessionPlayerStats,
+  computeSessionStats,
+  formatSessionLabel,
+  getActiveGame,
+  getGameShots,
+  getPlayerThrowCount,
+} from '../stats';
+import { getGamePlayerIds } from '../teams';
 import type { HeatmapCell } from '../stats';
 import type { AppData, ShotType } from '../types';
 import { OUTCOMES, SHOT_TYPES } from '../types';
@@ -193,6 +203,13 @@ export function StatsPanel({ data }: StatsPanelProps) {
     }
   }, [data.players, selectedId]);
 
+  const activeGame = getActiveGame(data);
+  const activeSessionShots = activeGame ? getGameShots(data, activeGame.id) : [];
+  const sessionStats = useMemo(
+    () => (activeGame ? computeSessionStats(data, activeGame.id) : null),
+    [activeGame, data],
+  );
+
   const stats = useMemo(() => {
     if (data.players.length === 0) return null;
     return selectedId === null
@@ -243,6 +260,48 @@ export function StatsPanel({ data }: StatsPanelProps) {
       <header className="panel-header">
         <h2>Stats</h2>
       </header>
+
+      {activeGame && sessionStats && sessionStats.totalShots > 0 && (
+        <section className="chart-card chart-card--session">
+          <h3>Current session</h3>
+          <p className="session-stats-subtitle">
+            {formatSessionLabel(activeGame, data.players)}
+            {' · '}
+            {activeSessionShots.length} throws logged
+          </p>
+          <div className="stat-cards stat-cards--primary">
+            <div className="stat-card">
+              <span className="stat-value">{sessionStats.totalShots}</span>
+              <span className="stat-label">Throws</span>
+            </div>
+            <div className="stat-card">
+              <span className="stat-value">{Math.round(sessionStats.successRate)}%</span>
+              <span className="stat-label">Success</span>
+            </div>
+            <div className="stat-card">
+              <span className="stat-value">{Math.round(sessionStats.sosoPlusRate)}%</span>
+              <span className="stat-label">Soso+</span>
+            </div>
+          </div>
+          <div className="player-chips session-player-chips">
+            {getGamePlayerIds(activeGame).map((pid) => {
+              const p = data.players.find((pl) => pl.id === pid);
+              if (!p) return null;
+              const ps = computeSessionPlayerStats(data, activeGame.id, pid);
+              if (!ps || ps.totalShots === 0) return null;
+              return (
+                <span key={pid} className="chip session-chip-readonly">
+                  {p.name}
+                  <span className="chip-score">{ps.totalShots}</span>
+                  <span className="chip-rate">{Math.round(ps.successRate)}%</span>
+                </span>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      <p className="stats-scope-label">All-time</p>
 
       <div className="player-chips">
         <button

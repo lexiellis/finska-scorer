@@ -1,4 +1,5 @@
 import { getGamePlayerIds } from './teams';
+import { isStatsSession, teamDisplayName } from './teams';
 import type { AppData, Distance, Game, Outcome, Player, Shot, ShotType } from './types';
 import { DISTANCES, OUTCOMES, SHOT_TYPES } from './types';
 
@@ -330,10 +331,66 @@ export function getPlayerThrowCount(data: AppData, playerId: string): number {
   return data.shots.filter((s) => s.playerId === playerId).length;
 }
 
-export function getActiveGame(data: AppData): Game | null {
-  return data.games.find((g) => g.endedAt === null) ?? null;
-}
-
 export function getGameShots(data: AppData, gameId: string): Shot[] {
   return data.shots.filter((s) => s.gameId === gameId);
+}
+
+export function getEndedSessions(data: AppData): Game[] {
+  return [...data.games]
+    .filter((g) => g.endedAt !== null)
+    .sort((a, b) => (b.endedAt ?? '').localeCompare(a.endedAt ?? ''));
+}
+
+export function formatSessionLabel(game: Game, players: Player[]): string {
+  const teamLabels = game.teams.map((t) => teamDisplayName(t, players));
+  if (isStatsSession(game)) {
+    return `Stats · ${teamLabels.join(', ')}`;
+  }
+  if (game.winnerTeamId) {
+    const winner = game.teams.find((t) => t.id === game.winnerTeamId);
+    const winnerName = winner ? teamDisplayName(winner, players) : 'Winner';
+    return `${teamLabels.join(' vs ')} · ${winnerName} won`;
+  }
+  return teamLabels.join(' vs ');
+}
+
+export function formatSessionDate(iso: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+export function computeSessionStats(data: AppData, gameId: string): PlayerStats | null {
+  const game = data.games.find((g) => g.id === gameId);
+  if (!game) return null;
+  const shots = getGameShots(data, gameId);
+  if (shots.length === 0) return null;
+  const player: Player = {
+    id: '__session__',
+    name: 'This session',
+    createdAt: '',
+  };
+  return computeStatsFromShots(data, player, shots);
+}
+
+export function computeSessionPlayerStats(
+  data: AppData,
+  gameId: string,
+  playerId: string,
+): PlayerStats | null {
+  const player = data.players.find((p) => p.id === playerId);
+  if (!player) return null;
+  const shots = getGameShots(data, gameId).filter((s) => s.playerId === playerId);
+  if (shots.length === 0) return null;
+  return computeStatsFromShots(data, player, shots);
+}
+
+export function getActiveGame(data: AppData): Game | null {
+  return data.games.find((g) => g.endedAt === null) ?? null;
 }
