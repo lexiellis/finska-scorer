@@ -1,10 +1,10 @@
 import { isStatsSession, teamDisplayName } from './teams';
 import { getDeviceId } from './storage';
 import type { AppData, Distance, Game, Outcome, Player, Shot, ShotType } from './types';
-import { DISTANCES, OUTCOMES, SHOT_TYPES } from './types';
+import { DISTANCES, OUTCOMES, ALL_SHOT_TYPES } from './types';
 
 export function formatDistanceLabel(distance: Distance): string {
-  if (distance === '12+') return '12m';
+  if (distance === '10+') return '10m+';
   return typeof distance === 'string' ? distance : `${distance}m`;
 }
 
@@ -85,7 +85,7 @@ export interface OutcomeByTypeRow {
 }
 
 function initShotTypeCounts(): Record<ShotType, number> {
-  return Object.fromEntries(SHOT_TYPES.map((t) => [t, 0])) as Record<ShotType, number>;
+  return Object.fromEntries(ALL_SHOT_TYPES.map((t) => [t, 0])) as Record<ShotType, number>;
 }
 
 function initOutcomeCounts(): Record<Outcome, number> {
@@ -114,12 +114,12 @@ function outcomeRate(shots: Shot[], predicate: (shot: Shot) => boolean): number 
 }
 
 function distanceNumericValue(distance: Shot['distance']): number {
-  if (distance === '12+') return 12;
+  if (distance === '10+') return 10;
   return distance;
 }
 
 function buildHeatmapGrid(shots: Shot[]): HeatmapRow[] {
-  const rows: HeatmapRow[] = SHOT_TYPES.map((shotType) => {
+  const rows: HeatmapRow[] = ALL_SHOT_TYPES.map((shotType) => {
     const typeShots = shots.filter((s) => s.shotType === shotType);
     const cells: HeatmapCell[] = DISTANCE_KEYS.map((distance) => {
       const cellShots = typeShots.filter((s) => String(s.distance) === distance);
@@ -182,7 +182,7 @@ function buildDistanceRatesByShotType(shots: Shot[]): ShotTypeDistanceRates[] {
   if (shots.length > 0) {
     result.push({ shotType: 'ALL', points: buildDistanceRatesForShots(shots) });
   }
-  for (const shotType of SHOT_TYPES) {
+  for (const shotType of ALL_SHOT_TYPES) {
     const typeShots = shots.filter((s) => s.shotType === shotType);
     if (typeShots.length === 0) continue;
     result.push({ shotType, points: buildDistanceRatesForShots(typeShots) });
@@ -191,7 +191,7 @@ function buildDistanceRatesByShotType(shots: Shot[]): ShotTypeDistanceRates[] {
 }
 
 function buildOutcomeByShotType(shots: Shot[]): OutcomeByTypeRow[] {
-  return SHOT_TYPES.map((shotType) => {
+  return ALL_SHOT_TYPES.map((shotType) => {
     const typeShots = shots.filter((s) => s.shotType === shotType);
     const outcomeCounts = initOutcomeCounts();
     for (const shot of typeShots) {

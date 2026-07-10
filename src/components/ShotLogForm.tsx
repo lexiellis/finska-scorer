@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import type { AppData, Distance, Game, Outcome, Shot, ShotType } from '../types';
+import type { AppData, Distance, Game, Outcome, SelectableShotType, Shot } from '../types';
 import { DISTANCES, OUTCOMES, SHOT_TYPES } from '../types';
 import { formatDistanceLabel } from '../stats';
 import { OUTCOME_BUTTON_LABELS } from '../outcomeDisplay';
@@ -10,11 +10,11 @@ interface ShotLogFormProps {
   players: AppData['players'];
   shots: Shot[];
   activePlayerId: string | null;
-  shotType: ShotType | null;
+  shotType: SelectableShotType | null;
   distance: Distance | null;
   score: number | null;
   outcome: Outcome | null;
-  onShotType: (v: ShotType) => void;
+  onShotType: (v: SelectableShotType) => void;
   onDistance: (v: Distance) => void;
   onScore: (v: number) => void;
   onOutcome: (v: Outcome) => void;
@@ -22,7 +22,7 @@ interface ShotLogFormProps {
   onUndo: () => void;
   onUpdateShot: (
     shotId: string,
-    patch: { shotType: ShotType; distance: Distance; score: number; outcome: Outcome },
+    patch: { shotType: SelectableShotType; distance: Distance; score: number; outcome: Outcome },
   ) => void;
   onEnd: () => void;
   flash: string;
@@ -67,7 +67,6 @@ export function ShotLogForm({
     setShowHistory(true);
   };
 
-  const isDistanceLocked = shotType === 'Break';
   const canLog =
     shotType !== null && distance !== null && score !== null && outcome !== null;
 
@@ -143,19 +142,14 @@ export function ShotLogForm({
         </section>
 
         <section className="log-section log-section--distance">
-          <h3 className="log-section-title">
-            Distance {isDistanceLocked ? '(locked to 3m)' : ''}
-          </h3>
+          <h3 className="log-section-title">Distance</h3>
           <div className="btn-grid btn-grid--distance">
             {DISTANCES.map((d) => (
               <button
                 key={String(d)}
                 type="button"
                 className={`pick-btn pick-btn--compact ${distance === d ? 'selected' : ''}`}
-                onClick={() => {
-                  if (!isDistanceLocked) onDistance(d);
-                }}
-                disabled={isDistanceLocked}
+                onClick={() => onDistance(d)}
               >
                 {formatDistanceLabel(d)}
               </button>

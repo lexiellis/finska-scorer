@@ -1,6 +1,5 @@
 export const SHOT_TYPES = [
   'Standard',
-  'Break',
   'Inertia',
   'Retro',
   'Elephant',
@@ -11,9 +10,14 @@ export const SHOT_TYPES = [
   'Crowd',
 ] as const;
 
-export type ShotType = (typeof SHOT_TYPES)[number];
+export type SelectableShotType = (typeof SHOT_TYPES)[number];
 
-export const DISTANCES = [3, 4, 5, 6, 7, 8, 9, 10, 11, '12+'] as const;
+/** Includes auto-assigned Break (first scoring shot in a game). */
+export type ShotType = SelectableShotType | 'Break';
+
+export const ALL_SHOT_TYPES: ShotType[] = [...SHOT_TYPES, 'Break'];
+
+export const DISTANCES = [3, 4, 5, 6, 7, 8, 9, '10+'] as const;
 
 export type Distance = (typeof DISTANCES)[number];
 

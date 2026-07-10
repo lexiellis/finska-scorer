@@ -247,8 +247,18 @@ function toShotRow(shot: Shot, deviceId: string): ShotRow {
   };
 }
 
+function parseStoredDistance(value: string): Shot['distance'] {
+  if (value === '10+' || value === '12+') return '10+';
+  const n = Number(value);
+  if (Number.isFinite(n)) {
+    if (n >= 10) return '10+';
+    return n as Shot['distance'];
+  }
+  return value as Shot['distance'];
+}
+
 function fromShotRow(row: ShotRow): Shot {
-  const distance = row.distance === '12+' ? '12+' : (Number(row.distance) as Shot['distance']);
+  const distance = parseStoredDistance(row.distance);
   return {
     id: row.id,
     gameId: row.game_id,

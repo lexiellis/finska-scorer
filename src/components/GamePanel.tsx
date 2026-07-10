@@ -17,7 +17,7 @@ import {
   isStatsSession,
   teamDisplayName,
 } from '../teams';
-import type { AppData, Distance, Game, Outcome, ShotType, Team } from '../types';
+import type { AppData, Distance, Game, Outcome, SelectableShotType, Team } from '../types';
 import { MatchSummary } from './MatchSummary';
 import { OrderSetup } from './OrderSetup';
 import { SessionHistory } from './SessionHistory';
@@ -60,7 +60,7 @@ interface GamePanelProps {
   onLogShot: (params: {
     gameId: string;
     playerId: string;
-    shotType: ShotType;
+    shotType: SelectableShotType;
     distance: Distance;
     score: number;
     outcome: Outcome;
@@ -68,7 +68,7 @@ interface GamePanelProps {
   onUndo: (gameId: string) => void;
   onUpdateShot: (
     shotId: string,
-    patch: { shotType: ShotType; distance: Distance; score: number; outcome: Outcome },
+    patch: { shotType: SelectableShotType; distance: Distance; score: number; outcome: Outcome },
   ) => void;
 }
 
@@ -86,7 +86,7 @@ export function GamePanel({
 }: GamePanelProps) {
   const activeGame = getActiveGame(data);
   const [activePlayerId, setActivePlayerId] = useState<string | null>(null);
-  const [shotType, setShotType] = useState<ShotType | null>(null);
+  const [shotType, setShotType] = useState<SelectableShotType | null>(null);
   const [distance, setDistance] = useState<Distance | null>(null);
   const [score, setScore] = useState<number | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
@@ -128,12 +128,6 @@ export function GamePanel({
       );
     }
   }, [activeGame, activePlayerId, completedGameId, data.shots]);
-
-  useEffect(() => {
-    if (shotType === 'Break' && distance !== 3) {
-      setDistance(3);
-    }
-  }, [distance, shotType]);
 
   const openOrderSetupForNewMatch = (teams: Team[]) => {
     const teamOrder = defaultTeamOrder(teams);

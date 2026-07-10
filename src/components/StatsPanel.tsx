@@ -22,7 +22,7 @@ import {
 import { getGamePlayerIds } from '../teams';
 import type { HeatmapCell } from '../stats';
 import type { AppData, ShotType } from '../types';
-import { OUTCOMES, SHOT_TYPES } from '../types';
+import { OUTCOMES, ALL_SHOT_TYPES } from '../types';
 import { getOutcomeIcon } from '../outcomeDisplay';
 
 interface StatsPanelProps {
@@ -248,7 +248,7 @@ export function StatsPanel({ data }: StatsPanelProps) {
   });
 
   const shotTypeData = stats
-    ? SHOT_TYPES.map((t) => ({
+    ? ALL_SHOT_TYPES.map((t) => ({
         name: t,
         count: stats.shotTypeCounts[t],
         pct: stats.totalShots > 0 ? (stats.shotTypeCounts[t] / stats.totalShots) * 100 : 0,

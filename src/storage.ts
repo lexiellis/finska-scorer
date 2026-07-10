@@ -1,6 +1,7 @@
 import type { AppData, Distance, Game, Outcome, Player, ShotType } from './types';
 import { defaultPlayerOrder, defaultTeamOrder } from './match';
 import { buildThrowOrder } from './teams';
+import { normalizeGameBreakShotTypes } from './breakShot';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import {
   fetchRelationalAppData,
@@ -26,9 +27,21 @@ function migrateShotType(shotType: string): ShotType {
   return shotType as ShotType;
 }
 
-function migrateDistance(distance: Distance | '9+' | number | string): Distance {
-  if (distance === '9+') return '12+';
-  if (distance === 12 || distance === '12') return '12+';
+function normalizeBreakShots(data: AppData): AppData {
+  const byGame = new Map<string, typeof data.shots>();
+  for (const shot of data.shots) {
+    const list = byGame.get(shot.gameId) ?? [];
+    list.push(shot);
+    byGame.set(shot.gameId, list);
+  }
+  const shots = [...byGame.values()].flatMap((gameShots) => normalizeGameBreakShotTypes(gameShots));
+  return { ...data, shots };
+}
+
+function migrateDistance(distance: Distance | '9+' | '12+' | number | string): Distance {
+  if (distance === '9+' || distance === '12+') return '10+';
+  if (distance === 11 || distance === 12 || distance === '11' || distance === '12') return '10+';
+  if (distance === 10 || distance === '10') return '10+';
   return distance as Distance;
 }
 
@@ -97,7 +110,7 @@ export function migrateAppData(data: AppData): AppData {
 
 function migrate(data: AppData): AppData {
   const players = data.players ?? [];
-  return {
+  const migrated: AppData = {
     ...data,
     matches: data.matches ?? [],
     games: (data.games ?? []).map((g) => migrateGame(g, players)),
@@ -108,10 +121,11 @@ function migrate(data: AppData): AppData {
       scoreAfter: s.scoreAfter ?? (s.score ?? 0),
       score: typeof s.score === 'number' ? s.score : null,
       shotType: migrateShotType(s.shotType as string),
-      distance: migrateDistance(s.distance as Distance | '9+' | number | string),
+      distance: migrateDistance(s.distance as Distance | '9+' | '12+' | number | string),
       outcome: migrateOutcome(s.outcome as string),
     })),
   };
+  return normalizeBreakShots(migrated);
 }
 
 function isHttpUrl(value: string): boolean {

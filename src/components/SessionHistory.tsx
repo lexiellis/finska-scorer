@@ -6,7 +6,7 @@ import {
   getGameShots,
 } from '../stats';
 import { isStatsSession } from '../teams';
-import type { AppData, Distance, Game, Outcome, ShotType } from '../types';
+import type { AppData, Distance, Game, Outcome, SelectableShotType } from '../types';
 import { ScoreBoard } from './ScoreBoard';
 
 interface SessionHistoryProps {
@@ -14,7 +14,7 @@ interface SessionHistoryProps {
   onDetailOpenChange?: (open: boolean) => void;
   onUpdateShot?: (
     shotId: string,
-    patch: { shotType: ShotType; distance: Distance; score: number; outcome: Outcome },
+    patch: { shotType: SelectableShotType; distance: Distance; score: number; outcome: Outcome },
   ) => void;
 }
 

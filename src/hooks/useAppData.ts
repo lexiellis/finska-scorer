@@ -28,7 +28,8 @@ import {
   recomputeGameState,
   rotateTeamsStartingFirst,
 } from '../teams';
-import type { AppData, Distance, Game, Match, Outcome, Player, Shot, ShotType, Team } from '../types';
+import { replaceGameShots } from '../breakShot';
+import type { AppData, Distance, Game, Match, Outcome, Player, Shot, SelectableShotType, Team } from '../types';
 
 function recalculateShotScores(game: Game, shots: Shot[]): Shot[] {
   const ordered = [...shots].sort((a, b) => a.recordedAt.localeCompare(b.recordedAt));
@@ -313,7 +314,7 @@ export function useAppData() {
     (params: {
       gameId: string;
       playerId: string;
-      shotType: ShotType;
+      shotType: SelectableShotType;
       distance: Distance;
       score: number;
       outcome: Outcome;
@@ -349,11 +350,12 @@ export function useAppData() {
           scoreAfter: scoreBefore,
         };
 
-        const allShots = [...prev.shots, shot];
+        const gameShots = [...prev.shots.filter((s) => s.gameId === params.gameId), shot];
+        const allShots = replaceGameShots(prev.shots, params.gameId, gameShots);
         nextPlayerId = getNextThrowPlayer(game, allShots, params.playerId);
 
         if (isStats) {
-          resultShot = shot;
+          resultShot = allShots.find((s) => s.id === shot.id) ?? shot;
           return {
             ...prev,
             shots: allShots,
@@ -370,7 +372,7 @@ export function useAppData() {
           newScore = scoreBefore;
         }
 
-        resultShot = shot;
+        resultShot = allShots.find((s) => s.id === shot.id) ?? shot;
         const state = recomputeGameState(game, allShots);
 
         if (state.endReason === 'three_misses') {
@@ -420,7 +422,7 @@ export function useAppData() {
       if (game.mode === 'stats') {
         return {
           ...prev,
-          shots: remainingShots,
+          shots: replaceGameShots(remainingShots, gameId, remainingShots.filter((s) => s.gameId === gameId)),
         };
       }
 
@@ -431,7 +433,7 @@ export function useAppData() {
 
       return {
         ...prev,
-        shots: remainingShots,
+        shots: replaceGameShots(remainingShots, gameId, remainingShots.filter((s) => s.gameId === gameId)),
         games: prev.games.map((g) =>
           g.id === gameId
             ? {
@@ -450,7 +452,7 @@ export function useAppData() {
   const updateShot = useCallback(
     (
       shotId: string,
-      patch: Pick<Shot, 'shotType' | 'distance' | 'score' | 'outcome'>,
+      patch: Pick<Shot, 'distance' | 'score' | 'outcome'> & { shotType: SelectableShotType },
     ) => {
       update((prev) => {
         const target = prev.shots.find((s) => s.id === shotId);
@@ -468,11 +470,20 @@ export function useAppData() {
         if (game.mode === 'stats') {
           return {
             ...prev,
-            shots: [...untouchedShots, ...patchedShots],
+            shots: replaceGameShots(
+              [...untouchedShots, ...patchedShots],
+              game.id,
+              patchedShots,
+            ),
           };
         }
 
         const recalculatedShots = recalculateShotScores(game, patchedShots);
+        const normalizedShots = replaceGameShots(
+          [...untouchedShots, ...recalculatedShots],
+          game.id,
+          recalculatedShots,
+        );
         const state = recomputeGameState(game, recalculatedShots);
 
         const updatedGame: Game = {
@@ -485,7 +496,7 @@ export function useAppData() {
 
         return {
           ...prev,
-          shots: [...untouchedShots, ...recalculatedShots],
+          shots: normalizedShots,
           games: prev.games.map((g) => (g.id === game.id ? updatedGame : g)),
         };
       });

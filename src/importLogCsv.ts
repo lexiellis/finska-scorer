@@ -1,5 +1,6 @@
+import { normalizeGameBreakShotTypes } from './breakShot';
 import { createId } from './storage';
-import type { AppData, Distance, Game, Outcome, Player, Shot, ShotType } from './types';
+import type { AppData, Distance, Game, Outcome, Player, Shot, SelectableShotType, ShotType } from './types';
 import { DISTANCES, OUTCOMES, SHOT_TYPES } from './types';
 
 export const BUNDLED_LOG_SESSION_ID = 'import-molkky-log-v1';
@@ -72,11 +73,12 @@ function parseDistance(raw: string): Distance | null {
   if (!trimmed) return null;
   if (trimmed.endsWith('+')) {
     const label = trimmed.replace(/m$/i, '');
-    return label === '12' ? '12+' : null;
+    if (label === '10' || label === '11' || label === '12') return '10+';
+    return null;
   }
   const n = Number(trimmed.replace(/m$/i, ''));
   if (!Number.isFinite(n)) return null;
-  if (n === 12) return '12+';
+  if (n >= 10) return '10+';
   return DISTANCES.includes(n as Distance) ? (n as Distance) : null;
 }
 
@@ -86,8 +88,8 @@ function normalizeOutcome(raw: string): Outcome | null {
 }
 
 function normalizeShotType(raw: string): ShotType | null {
-  const mapped = raw === '12 Break' ? 'Break' : raw;
-  return SHOT_TYPES.includes(mapped as ShotType) ? (mapped as ShotType) : null;
+  if (raw === '12 Break' || raw === 'Break') return 'Standard';
+  return SHOT_TYPES.includes(raw as SelectableShotType) ? (raw as ShotType) : null;
 }
 
 function scoreFromRow(_hit: string, _outcome: Outcome): number | null {
@@ -210,14 +212,16 @@ export function importLogCsv(
       ? base.shots.filter((s) => s.gameId !== sessionId)
       : base.shots;
 
+  const normalizedShots = normalizeGameBreakShotTypes(shots);
+
   return {
     data: {
       players,
       matches: base.matches ?? [],
       games,
-      shots: [...existingShots, ...shots],
+      shots: [...existingShots, ...normalizedShots],
     },
-    imported: shots.length,
+    imported: normalizedShots.length,
     skipped: false,
     message: `Imported ${shots.length} throws from spreadsheet`,
   };

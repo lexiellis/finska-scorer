@@ -3,7 +3,7 @@ import { FINSKA_TARGET } from '../scoring';
 import { getOutcomeIcon, OUTCOME_BUTTON_LABELS } from '../outcomeDisplay';
 import { isHitShot, formatDistanceLabel } from '../stats';
 import { getGameShots, getPlayerName, getTeamsInDisplayOrder, isStatsSession, teamDisplayName } from '../teams';
-import type { AppData, Distance, Game, Outcome, Shot, ShotType } from '../types';
+import type { AppData, Distance, Game, Outcome, SelectableShotType, Shot } from '../types';
 import { DISTANCES, OUTCOMES, SHOT_TYPES } from '../types';
 
 interface ScoreBoardProps {
@@ -16,7 +16,7 @@ interface ScoreBoardProps {
   onDismiss?: () => void;
   onUpdateShot?: (
     shotId: string,
-    patch: { shotType: ShotType; distance: Distance; score: number; outcome: Outcome },
+    patch: { shotType: SelectableShotType; distance: Distance; score: number; outcome: Outcome },
   ) => void;
 }
 
@@ -91,10 +91,10 @@ function ShotEditForm({
   onSave,
   onCancel,
 }: {
-  draft: { shotType: ShotType; distance: Distance; score: number; outcome: Outcome };
+  draft: { shotType: SelectableShotType; distance: Distance; score: number; outcome: Outcome };
   setDraft: Dispatch<
     SetStateAction<{
-      shotType: ShotType;
+      shotType: SelectableShotType;
       distance: Distance;
       score: number;
       outcome: Outcome;
@@ -103,8 +103,6 @@ function ShotEditForm({
   onSave: () => void;
   onCancel: () => void;
 }) {
-  const isDistanceLocked = draft.shotType === 'Break';
-
   return (
     <div className="history-edit-grid" onClick={(e) => e.stopPropagation()}>
       <select
@@ -115,8 +113,7 @@ function ShotEditForm({
             prev
               ? {
                   ...prev,
-                  shotType: e.target.value as ShotType,
-                  distance: e.target.value === 'Break' ? 3 : prev.distance,
+                  shotType: e.target.value as SelectableShotType,
                 }
               : prev,
           )
@@ -131,7 +128,6 @@ function ShotEditForm({
       <select
         className="history-input"
         value={String(draft.distance)}
-        disabled={isDistanceLocked}
         onChange={(e) =>
           setDraft((prev) => {
             if (!prev) return prev;
@@ -206,7 +202,7 @@ export function ScoreBoard({
 
   const [editingShotId, setEditingShotId] = useState<string | null>(null);
   const [draft, setDraft] = useState<{
-    shotType: ShotType;
+    shotType: SelectableShotType;
     distance: Distance;
     score: number;
     outcome: Outcome;
@@ -341,7 +337,7 @@ export function ScoreBoard({
                     if (!canEditShots || editingShotId === shot.id) return;
                     setEditingShotId(shot.id);
                     setDraft({
-                      shotType: shot.shotType,
+                      shotType: shot.shotType === 'Break' ? 'Standard' : shot.shotType,
                       distance: shot.distance,
                       score: shot.score ?? 0,
                       outcome: shot.outcome,
