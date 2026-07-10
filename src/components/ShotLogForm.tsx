@@ -71,13 +71,6 @@ export function ShotLogForm({
     shotType !== null && distance !== null && score !== null && outcome !== null;
 
   const handleMainAction = () => {
-    if (showHistory) {
-      if (canLog) {
-        onLog();
-        openHistory();
-      }
-      return;
-    }
     if (canLog) {
       onLog();
       openHistory();
@@ -86,9 +79,13 @@ export function ShotLogForm({
     openHistory();
   };
 
+  const handleLogFromHistory = () => {
+    if (!canLog) return;
+    onLog();
+  };
+
   const mainLabel = canLog ? 'Log shot' : 'View game';
   const mainBtnClass = canLog ? 'btn primary log-btn' : 'btn dark log-btn';
-  const showMainBtn = !showHistory || canLog;
 
   return (
     <div className="shot-log">
@@ -192,12 +189,33 @@ export function ShotLogForm({
       </div>
       )}
 
-      <footer className={`log-footer${showMainBtn ? '' : ' log-footer--icons-only'}`}>
-        {showMainBtn && (
-          <button type="button" className={mainBtnClass} onClick={handleMainAction}>
-            {mainLabel}
-          </button>
-        )}
+      <footer className="log-footer">
+        <div className="log-footer-main-btns">
+          {showHistory ? (
+            <>
+              <button
+                type="button"
+                className="btn dark log-btn"
+                onClick={() => setShowHistory(false)}
+              >
+                Throw input
+              </button>
+              {canLog && (
+                <button
+                  type="button"
+                  className="btn primary log-btn"
+                  onClick={handleLogFromHistory}
+                >
+                  Log shot
+                </button>
+              )}
+            </>
+          ) : (
+            <button type="button" className={mainBtnClass} onClick={handleMainAction}>
+              {mainLabel}
+            </button>
+          )}
+        </div>
         <div className="log-footer-actions">
           <button
             type="button"

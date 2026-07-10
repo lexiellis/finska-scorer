@@ -688,6 +688,17 @@
   align-items: stretch;
 }
 
+.log-footer-main-btns {
+  display: flex;
+  gap: var(--log-btn-gap, 2px);
+  min-width: 0;
+}
+
+.log-footer-main-btns .log-btn {
+  flex: 1;
+  min-width: 0;
+}
+
 .log-footer-actions {
   display: flex;
   align-items: stretch;
@@ -1865,6 +1876,10 @@
 
 .shot-log .log-btn {
   border-radius: 16px;
+}
+
+.shot-log .log-footer-main-btns {
+  gap: var(--log-btn-gap);
 }
 
 .shot-log .log-footer-icon {
