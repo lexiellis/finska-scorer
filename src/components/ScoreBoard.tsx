@@ -13,6 +13,7 @@ interface ScoreBoardProps {
   activePlayerId: string | null;
   mode: 'compact' | 'expanded';
   scoreTravel?: number;
+  onDismiss?: () => void;
   onUpdateShot?: (
     shotId: string,
     patch: { shotType: ShotType; distance: Distance; score: number; outcome: Outcome },
@@ -195,8 +196,11 @@ export function ScoreBoard({
   shots,
   activePlayerId,
   mode,
+  onDismiss,
   onUpdateShot,
 }: ScoreBoardProps) {
+  const tapToDismiss = mode === 'expanded' && Boolean(onDismiss);
+  const canEditShots = Boolean(onUpdateShot) && !tapToDismiss;
   const throws = useMemo(() => getGameShots(game, shots), [game, shots]);
 
   const [editingShotId, setEditingShotId] = useState<string | null>(null);
@@ -277,7 +281,19 @@ export function ScoreBoard({
   }
 
   return (
-    <div className="score-board-expanded">
+    <div
+      className={`score-board-expanded${tapToDismiss ? ' score-board-expanded--tap-dismiss' : ''}`}
+      onClick={tapToDismiss ? onDismiss : undefined}
+      onKeyDown={
+        tapToDismiss
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') onDismiss?.();
+            }
+          : undefined
+      }
+      role={tapToDismiss ? 'button' : undefined}
+      tabIndex={tapToDismiss ? 0 : undefined}
+    >
       <div className="score-board-expanded-layout">
         <div className="score-bubbles score-bubbles--expanded">
           {teamMeta.map(({ team, total, eliminated, isActive, name, teamThrowList, upcomingName, multiPlayerTeam }) => (
@@ -321,7 +337,7 @@ export function ScoreBoard({
                   const isEditing = editingShotId === shot.id && draft !== null;
 
                   const startEdit = () => {
-                    if (!onUpdateShot || editingShotId === shot.id) return;
+                    if (!canEditShots || editingShotId === shot.id) return;
                     setEditingShotId(shot.id);
                     setDraft({
                       shotType: shot.shotType,
@@ -366,7 +382,11 @@ export function ScoreBoard({
                     .join(' ');
 
                   return (
-                    <div key={shot.id} className="score-bubble-row" onClick={startEdit}>
+                    <div
+                      key={shot.id}
+                      className="score-bubble-row"
+                      onClick={canEditShots ? startEdit : undefined}
+                    >
                       <div className={`score-bubble-row-total ${scoreClass}`}>
                         {isStats
                           ? shot.score === null
@@ -380,7 +400,11 @@ export function ScoreBoard({
                       <div className="score-bubble-row-shot">
                         <ShotInfoCell
                           shot={shot}
-                          playerName={getPlayerName(players, shot.playerId)}
+                          playerName={
+                            multiPlayerTeam
+                              ? getPlayerName(players, shot.playerId)
+                              : undefined
+                          }
                           isMiss={isMiss}
                           isBust={isBust}
                         />

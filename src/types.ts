@@ -72,6 +72,8 @@ export interface Game {
   endedAt: string | null;
   matchId?: string;
   gameNumber?: number;
+  /** Device that owns live logging for this session. */
+  scribeDeviceId?: string;
   /** @deprecated Migrated from pre-team games */
   playerIds?: string[];
   /** @deprecated Use winnerTeamId */

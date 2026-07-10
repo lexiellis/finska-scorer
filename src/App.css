@@ -1812,6 +1812,57 @@
   margin-bottom: clamp(0.2rem, 0.8vh, 0.45rem);
 }
 
+.shot-log .log-history-view {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.shot-log .score-board-expanded--tap-dismiss {
+  flex: 1;
+  min-height: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.shot-log .score-board-expanded--tap-dismiss .score-bubble-row {
+  cursor: pointer;
+}
+
+.shot-log .score-bubble-row-throw,
+.shot-log .score-bubble-row-total {
+  width: 3.3rem;
+  font-size: clamp(1.47rem, 4.5vw, 1.79rem);
+}
+
+.shot-log .score-bubble-row:last-child .score-bubble-row-total {
+  font-size: clamp(1.68rem, 5.04vw, 2.03rem);
+}
+
+.shot-log .score-bubble-row {
+  min-height: 4.7rem;
+}
+
+.shot-log .score-bubble-row--empty span {
+  font-size: 1.15rem;
+}
+
+.shot-log .score-bubbles--expanded .score-bubble-column-head .score-bubble-name {
+  font-size: clamp(1.28rem, 3.9vw, 1.51rem);
+}
+
+.log-footer--icons-only {
+  grid-template-columns: 1fr;
+  justify-items: end;
+}
+
+.log-footer--icons-only .log-footer-actions {
+  width: 100%;
+  justify-content: flex-end;
+}
+
 .shot-log .log-btn {
   border-radius: 16px;
 }

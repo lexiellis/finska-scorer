@@ -1,17 +1,17 @@
 import type { AppData, Distance, Game, Outcome, Player, ShotType } from './types';
 import { defaultPlayerOrder, defaultTeamOrder } from './match';
 import { buildThrowOrder } from './teams';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import {
+  fetchRelationalAppData,
+  mergeLocalWithRemote,
+  migrateLegacyBlobs,
+  upsertAppData,
+} from './remoteDb';
 
 const STORAGE_KEY = 'finska-scorer-data';
 const IMPORT_VERSION_KEY = 'finska-import-version';
 const DEVICE_ID_KEY = 'finska-device-id';
-const SUPABASE_TABLE = 'app_state';
-
-type SupabaseStateRow = {
-  id: string;
-  data: AppData;
-};
 
 const emptyData = (): AppData => ({
   players: [],
@@ -90,6 +90,10 @@ function migrateGame(raw: Game, players: Player[]): Game {
   return { ...migrated, throwOrder: migrateThrowOrder(migrated) };
 }
 
+export function migrateAppData(data: AppData): AppData {
+  return migrate(data);
+}
+
 function migrate(data: AppData): AppData {
   const players = data.players ?? [];
   return {
@@ -137,7 +141,7 @@ export function isRemoteStorageConfigured(): boolean {
 export type StorageMode = 'supabase' | 'local';
 
 export type RemoteLoadResult =
-  | { status: 'ok'; data: AppData }
+  | { status: 'ok'; data: AppData; sharedStats: boolean; remoteFound: boolean }
   | { status: 'empty' }
   | { status: 'error'; message: string }
   | { status: 'disabled' };
@@ -153,9 +157,10 @@ export interface SyncStatus {
   remoteRowFound: boolean | null;
   lastSaveOk: boolean | null;
   error: string | null;
+  sharedStats: boolean;
 }
 
-/** Stable id for this browser — each phone gets its own Supabase row. */
+/** Stable id for this browser — used for session ownership, not data isolation. */
 export function getDeviceId(): string {
   try {
     const existing = localStorage.getItem(DEVICE_ID_KEY);
@@ -183,6 +188,7 @@ export function initialSyncStatus(): SyncStatus {
     remoteRowFound: null,
     lastSaveOk: null,
     error: null,
+    sharedStats: false,
   };
 }
 
@@ -225,55 +231,72 @@ export function loadData(): AppData {
   }
 }
 
-export async function loadRemoteData(): Promise<RemoteLoadResult> {
-  if (!supabase) {
+function getSupabaseClient(): SupabaseClient | null {
+  return supabase;
+}
+
+export async function loadRemoteData(localData: AppData): Promise<RemoteLoadResult> {
+  const client = getSupabaseClient();
+  if (!client) {
     warnIfRemoteStorageDisabled();
     return { status: 'disabled' };
   }
 
   const deviceId = getDeviceStateId();
+  let working = migrate(localData);
 
-  const { data, error } = await supabase
-    .from(SUPABASE_TABLE)
-    .select('id, data')
-    .eq('id', deviceId)
-    .maybeSingle<SupabaseStateRow>();
+  const migration = await migrateLegacyBlobs(client, working, deviceId, migrate);
+  if (migration.error) {
+    console.error('Legacy migration failed:', migration.error);
+    return { status: 'error', message: migration.error };
+  }
+  working = migration.merged;
 
-  if (error) {
-    const message = error.message;
-    console.error('Failed to load device app data from Supabase:', message);
-    return { status: 'error', message };
+  const remote = await fetchRelationalAppData(client, deviceId);
+  if (remote.error === 'relational_tables_missing') {
+    return {
+      status: 'error',
+      message:
+        'Run supabase/schema.sql in your Supabase SQL editor to create the finska_* tables.',
+    };
+  }
+  if (remote.error) {
+    console.error('Failed to load relational app data:', remote.error);
+    return { status: 'error', message: remote.error };
   }
 
-  if (!data?.data) return { status: 'empty' };
+  if (!remote.data) return { status: 'empty' };
 
-  const migrated = migrate({ ...emptyData(), ...data.data });
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
-  return { status: 'ok', data: migrated };
+  const hasRows =
+    remote.data.players.length > 0 ||
+    remote.data.games.length > 0 ||
+    remote.data.shots.length > 0;
+
+  const merged = mergeLocalWithRemote(working, remote.data, deviceId);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+
+  return {
+    status: 'ok',
+    data: merged,
+    sharedStats: true,
+    remoteFound: hasRows,
+  };
 }
 
 export async function saveData(data: AppData): Promise<SaveResult> {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  if (!supabase) {
+  const client = getSupabaseClient();
+  if (!client) {
     warnIfRemoteStorageDisabled();
     return { ok: true, skipped: true };
   }
 
   const deviceId = getDeviceStateId();
-
-  const { error } = await supabase.from(SUPABASE_TABLE).upsert(
-    {
-      id: deviceId,
-      data,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: 'id' },
-  );
+  const error = await upsertAppData(client, data, deviceId);
 
   if (error) {
-    const message = error.message;
-    console.error('Failed to save device app data to Supabase:', message);
-    return { ok: false, message };
+    console.error('Failed to sync app data to Supabase:', error);
+    return { ok: false, message: error };
   }
 
   return { ok: true };

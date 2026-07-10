@@ -4,6 +4,7 @@ import { applyFinskaScore } from '../scoring';
 import {
   clearLocalAppData,
   createId,
+  getDeviceId,
   initialSyncStatus,
   isRemoteStorageConfigured,
   loadData,
@@ -61,13 +62,16 @@ export function useAppData() {
       if (!needsFreshImport) {
         loaded = loadData();
         if (isRemoteStorageConfigured()) {
-          const remote = await loadRemoteData();
+          const remote = await loadRemoteData(loaded);
           if (remote.status === 'ok') {
             loaded = remote.data;
-            nextSync = { ...nextSync, remoteRowFound: true };
+            nextSync = {
+              ...nextSync,
+              remoteRowFound: remote.remoteFound,
+              sharedStats: remote.sharedStats,
+            };
           } else if (remote.status === 'empty') {
-            nextSync = { ...nextSync, remoteRowFound: false };
-            // Keep local data — first save will create this device's row.
+            nextSync = { ...nextSync, remoteRowFound: false, sharedStats: true };
           } else if (remote.status === 'error') {
             nextSync = { ...nextSync, error: remote.message };
           }
@@ -108,6 +112,7 @@ export function useAppData() {
         lastSaveOk: result.ok,
         error: result.ok ? prev.error : result.message,
         remoteRowFound: result.ok ? true : prev.remoteRowFound,
+        sharedStats: result.ok ? true : prev.sharedStats,
       }));
     });
   }, [data, isHydrated]);
@@ -168,6 +173,7 @@ export function useAppData() {
         endedAt: null,
         matchId,
         gameNumber,
+        scribeDeviceId: getDeviceId(),
       };
 
       update((prev) => {
@@ -254,6 +260,7 @@ export function useAppData() {
       winnerTeamId: null,
       startedAt: new Date().toISOString(),
       endedAt: null,
+      scribeDeviceId: getDeviceId(),
     };
     update((prev) => ({ ...prev, games: [...prev.games, game] }));
     return game;

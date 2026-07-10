@@ -23,27 +23,31 @@ function syncStatusMessage(sync: SyncStatus, playerCount: number, shotCount: num
   const shortId = sync.deviceId.slice(0, 8);
 
   if (sync.mode === 'local') {
-    return `This phone/browser only — data is not shared with other devices (id ${shortId}…).`;
+    return `This phone/browser only — data is not shared (id ${shortId}…). Add Supabase env vars to sync stats.`;
   }
 
   if (sync.error) {
-    return `Backup error: ${sync.error}. Data is still saved on this device.`;
+    return `Sync error: ${sync.error}. Data is still saved on this device.`;
   }
 
   if (sync.lastSaveOk === false) {
-    return 'Could not back up to Supabase. Data is still saved on this device.';
+    return 'Could not sync to Supabase. Data is still saved on this device.';
   }
 
   const summary = `${playerCount} players, ${shotCount} throws`;
+  if (sync.lastSaveOk && sync.sharedStats) {
+    return `Shared stats — ${summary}. Only this phone logs the active session (${shortId}…).`;
+  }
+
   if (sync.lastSaveOk) {
-    return `This phone only — ${summary}. Backed up to your device row (${shortId}…), not shared with other phones.`;
+    return `Synced — ${summary}. Active sessions stay on this phone (${shortId}…).`;
   }
 
   if (sync.remoteRowFound === false) {
-    return `This device (${shortId}…) — backing up ${summary}…`;
+    return `Uploading ${summary} to shared database…`;
   }
 
-  return `This device (${shortId}…) — loading backup…`;
+  return `Loading shared stats…`;
 }
 
 export function PlayersPanel({

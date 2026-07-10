@@ -1,5 +1,6 @@
 import { getGamePlayerIds } from './teams';
 import { isStatsSession, teamDisplayName } from './teams';
+import { getDeviceId } from './storage';
 import type { AppData, Distance, Game, Outcome, Player, Shot, ShotType } from './types';
 import { DISTANCES, OUTCOMES, SHOT_TYPES } from './types';
 
@@ -392,5 +393,12 @@ export function computeSessionPlayerStats(
 }
 
 export function getActiveGame(data: AppData): Game | null {
-  return data.games.find((g) => g.endedAt === null) ?? null;
+  const deviceId = getDeviceId();
+  return (
+    data.games.find(
+      (g) =>
+        g.endedAt === null &&
+        (g.scribeDeviceId === deviceId || !g.scribeDeviceId),
+    ) ?? null
+  );
 }

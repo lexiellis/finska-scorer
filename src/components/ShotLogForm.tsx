@@ -73,7 +73,10 @@ export function ShotLogForm({
 
   const handleMainAction = () => {
     if (showHistory) {
-      setShowHistory(false);
+      if (canLog) {
+        onLog();
+        openHistory();
+      }
       return;
     }
     if (canLog) {
@@ -81,11 +84,12 @@ export function ShotLogForm({
       openHistory();
       return;
     }
-    else openHistory();
+    openHistory();
   };
 
-  const mainLabel = showHistory ? 'Back' : canLog ? 'Log shot' : 'View game';
-  const mainBtnClass = showHistory || !canLog ? 'btn dark log-btn' : 'btn primary log-btn';
+  const mainLabel = canLog ? 'Log shot' : 'View game';
+  const mainBtnClass = canLog ? 'btn primary log-btn' : 'btn dark log-btn';
+  const showMainBtn = !showHistory || canLog;
 
   return (
     <div className="shot-log">
@@ -108,15 +112,18 @@ export function ShotLogForm({
       )}
 
       {showHistory ? (
-        <ScoreBoard
-          game={game}
-          players={players}
-          shots={shots}
-          activePlayerId={activePlayerId}
-          mode="expanded"
-          scoreTravel={scoreTravel}
-          onUpdateShot={onUpdateShot}
-        />
+        <div className="log-history-view">
+          <ScoreBoard
+            game={game}
+            players={players}
+            shots={shots}
+            activePlayerId={activePlayerId}
+            mode="expanded"
+            scoreTravel={scoreTravel}
+            onDismiss={() => setShowHistory(false)}
+            onUpdateShot={onUpdateShot}
+          />
+        </div>
       ) : (
       <div className="log-fields">
         <section className="log-section log-section--type">
@@ -191,10 +198,12 @@ export function ShotLogForm({
       </div>
       )}
 
-      <footer className="log-footer">
-        <button type="button" className={mainBtnClass} onClick={handleMainAction}>
-          {mainLabel}
-        </button>
+      <footer className={`log-footer${showMainBtn ? '' : ' log-footer--icons-only'}`}>
+        {showMainBtn && (
+          <button type="button" className={mainBtnClass} onClick={handleMainAction}>
+            {mainLabel}
+          </button>
+        )}
         <div className="log-footer-actions">
           <button
             type="button"
