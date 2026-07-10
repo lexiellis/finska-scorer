@@ -1,4 +1,3 @@
-import { getGamePlayerIds } from './teams';
 import { isStatsSession, teamDisplayName } from './teams';
 import { getDeviceId } from './storage';
 import type { AppData, Distance, Game, Outcome, Player, Shot, ShotType } from './types';
@@ -28,9 +27,6 @@ export function isSosoOnlyOutcome(shot: Shot): boolean {
 
 export interface PlayerStats {
   player: Player;
-  gamesPlayed: number;
-  wins: number;
-  winRate: number;
   totalShots: number;
   totalPoints: number;
   avgScorePerShot: number;
@@ -215,7 +211,7 @@ function buildOutcomeByShotType(shots: Shot[]): OutcomeByTypeRow[] {
 export function computePlayerStats(data: AppData, playerId: string): PlayerStats | null {
   const player = data.players.find((p) => p.id === playerId);
   if (!player) return null;
-  return computeStatsFromShots(data, player, getPlayerShots(data, playerId));
+  return computeStatsFromShots(player, getPlayerShots(data, playerId));
 }
 
 export function computeAllPlayersStats(data: AppData): PlayerStats | null {
@@ -225,25 +221,10 @@ export function computeAllPlayersStats(data: AppData): PlayerStats | null {
     name: 'All players',
     createdAt: '',
   };
-  return computeStatsFromShots(data, player, data.shots);
+  return computeStatsFromShots(player, data.shots);
 }
 
-function computeStatsFromShots(data: AppData, player: Player, shots: Shot[]): PlayerStats {
-  const competitiveGames = data.games.filter(
-    (g) => g.mode === 'game' && g.endedAt !== null,
-  );
-  const playerId = player.id;
-  const isAggregate = playerId === '__all__';
-  const gamesPlayed = isAggregate
-    ? 0
-    : competitiveGames.filter((g) => getGamePlayerIds(g).includes(playerId)).length;
-  const wins = isAggregate
-    ? 0
-    : competitiveGames.filter((g) => {
-        if (!g.winnerTeamId) return false;
-        const team = g.teams.find((t) => t.id === g.winnerTeamId);
-        return team?.playerIds.includes(playerId) ?? false;
-      }).length;
+function computeStatsFromShots(player: Player, shots: Shot[]): PlayerStats {
   const shotTypeCounts = initShotTypeCounts();
   const outcomeCounts = initOutcomeCounts();
   const distanceMap = new Map<string, number>();
@@ -305,9 +286,6 @@ function computeStatsFromShots(data: AppData, player: Player, shots: Shot[]): Pl
 
   return {
     player,
-    gamesPlayed,
-    wins,
-    winRate: gamesPlayed > 0 ? (wins / gamesPlayed) * 100 : 0,
     totalShots: shots.length,
     totalPoints,
     avgScorePerShot: scoredShotCount > 0 ? totalPoints / scoredShotCount : 0,
@@ -377,7 +355,7 @@ export function computeSessionStats(data: AppData, gameId: string): PlayerStats 
     name: 'This session',
     createdAt: '',
   };
-  return computeStatsFromShots(data, player, shots);
+  return computeStatsFromShots(player, shots);
 }
 
 export function computeSessionPlayerStats(
@@ -389,7 +367,7 @@ export function computeSessionPlayerStats(
   if (!player) return null;
   const shots = getGameShots(data, gameId).filter((s) => s.playerId === playerId);
   if (shots.length === 0) return null;
-  return computeStatsFromShots(data, player, shots);
+  return computeStatsFromShots(player, shots);
 }
 
 export function getActiveGame(data: AppData): Game | null {

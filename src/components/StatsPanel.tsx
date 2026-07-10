@@ -552,25 +552,6 @@ export function StatsPanel({ data }: StatsPanelProps) {
             </section>
           )}
 
-          {stats.gamesPlayed > 0 && (
-            <section className="chart-card chart-card--secondary">
-              <h3>Competitive games</h3>
-              <div className="stat-cards stat-cards--compact">
-                <div className="stat-card stat-card--muted">
-                  <span className="stat-value">{stats.wins}</span>
-                  <span className="stat-label">Wins</span>
-                </div>
-                <div className="stat-card stat-card--muted">
-                  <span className="stat-value">{Math.round(stats.winRate)}%</span>
-                  <span className="stat-label">Win rate</span>
-                </div>
-                <div className="stat-card stat-card--muted">
-                  <span className="stat-value">{stats.gamesPlayed}</span>
-                  <span className="stat-label">Games</span>
-                </div>
-              </div>
-            </section>
-          )}
         </>
       ) : (
         <p className="empty-state">No shots logged yet.</p>
