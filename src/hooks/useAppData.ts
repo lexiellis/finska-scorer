@@ -26,6 +26,7 @@ import {
   getTeamForPlayer,
   isMissOutcome,
   recomputeGameState,
+  rotateTeamsStartingFirst,
 } from '../teams';
 import type { AppData, Distance, Game, Match, Outcome, Player, Shot, ShotType, Team } from '../types';
 
@@ -153,7 +154,10 @@ export function useAppData() {
       const { teams, teamOrder, playerOrder, startingTeamId, matchId, gameNumber } = params;
       if (teams.length < 2) return null;
 
-      const orderedTeams = teamsWithPlayerOrder(teams, playerOrder);
+      const orderedTeams = rotateTeamsStartingFirst(
+        teamsWithPlayerOrder(teams, playerOrder),
+        startingTeamId,
+      );
       const scores = Object.fromEntries(orderedTeams.map((t) => [t.id, 0]));
       const throwOrder = buildThrowOrder(
         orderedTeams,

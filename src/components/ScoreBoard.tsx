@@ -2,7 +2,7 @@ import { useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 import { FINSKA_TARGET } from '../scoring';
 import { getOutcomeIcon, OUTCOME_BUTTON_LABELS } from '../outcomeDisplay';
 import { isHitShot, formatDistanceLabel } from '../stats';
-import { getGameShots, getPlayerName, isStatsSession, teamDisplayName } from '../teams';
+import { getGameShots, getPlayerName, getTeamsInDisplayOrder, isStatsSession, teamDisplayName } from '../teams';
 import type { AppData, Distance, Game, Outcome, Shot, ShotType } from '../types';
 import { DISTANCES, OUTCOMES, SHOT_TYPES } from '../types';
 
@@ -202,6 +202,7 @@ export function ScoreBoard({
   const tapToDismiss = mode === 'expanded' && Boolean(onDismiss);
   const canEditShots = Boolean(onUpdateShot) && !tapToDismiss;
   const throws = useMemo(() => getGameShots(game, shots), [game, shots]);
+  const displayTeams = useMemo(() => getTeamsInDisplayOrder(game, shots), [game, shots]);
 
   const [editingShotId, setEditingShotId] = useState<string | null>(null);
   const [draft, setDraft] = useState<{
@@ -212,14 +213,14 @@ export function ScoreBoard({
   } | null>(null);
 
   const teamShots = useMemo(
-    () => game.teams.map((team) => throws.filter((s) => s.teamId === team.id)),
-    [game.teams, throws],
+    () => displayTeams.map((team) => throws.filter((s) => s.teamId === team.id)),
+    [displayTeams, throws],
   );
   const rowCount = Math.max(0, ...teamShots.map((rows) => rows.length));
 
   const isStats = isStatsSession(game);
 
-  const teamMeta = game.teams.map((team, teamIndex) => {
+  const teamMeta = displayTeams.map((team, teamIndex) => {
     const total = game.scores[team.id] ?? 0;
     const eliminated = game.eliminatedTeamIds.includes(team.id);
     const teamThrowList = teamShots[teamIndex] ?? [];

@@ -143,6 +143,37 @@ export function teamDisplayName(team: Team, players: { id: string; name: string 
   return names.length > 0 ? names.join(' & ') : 'Team';
 }
 
+/** Rotate teams so whoever throws first appears on the left in the scoreboard. */
+export function rotateTeamsStartingFirst(teams: Team[], startingTeamId: string): Team[] {
+  const idx = teams.findIndex((t) => t.id === startingTeamId);
+  if (idx <= 0) return teams;
+  return [...teams.slice(idx), ...teams.slice(0, idx)];
+}
+
+export function getTeamsInDisplayOrder(
+  game: Game,
+  shots: { gameId: string; teamId: string; recordedAt: string }[] = [],
+): Team[] {
+  const { teams } = game;
+  if (teams.length <= 1) return teams;
+
+  let startingTeamId: string | null = null;
+  const firstPlayerId = game.throwOrder?.[0];
+  if (firstPlayerId) {
+    startingTeamId = getTeamForPlayer(game, firstPlayerId)?.id ?? null;
+  }
+
+  if (!startingTeamId) {
+    const firstShot = shots
+      .filter((s) => s.gameId === game.id)
+      .sort((a, b) => a.recordedAt.localeCompare(b.recordedAt))[0];
+    startingTeamId = firstShot?.teamId ?? null;
+  }
+
+  if (!startingTeamId) return teams;
+  return rotateTeamsStartingFirst(teams, startingTeamId);
+}
+
 export type GameEndReason = 'win_50' | 'three_misses' | null;
 
 export interface RecomputedGameState {
