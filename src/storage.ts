@@ -8,6 +8,7 @@ import {
   migrateLegacyBlobs,
   upsertAppData,
 } from './remoteDb';
+import { dedupePlayersByName } from './dedupePlayers';
 
 const STORAGE_KEY = 'finska-scorer-data';
 const IMPORT_VERSION_KEY = 'finska-import-version';
@@ -225,10 +226,14 @@ export function loadData(): AppData {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return emptyData();
-    return migrate({ ...emptyData(), ...JSON.parse(raw) } as AppData);
+    return dedupeLocalAppData(migrate({ ...emptyData(), ...JSON.parse(raw) } as AppData));
   } catch {
     return emptyData();
   }
+}
+
+export function dedupeLocalAppData(data: AppData): AppData {
+  return dedupePlayersByName(data).data;
 }
 
 function getSupabaseClient(): SupabaseClient | null {
@@ -273,18 +278,20 @@ export async function loadRemoteData(localData: AppData): Promise<RemoteLoadResu
     remote.data.shots.length > 0;
 
   const merged = mergeLocalWithRemote(working, remote.data, deviceId);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+  const deduped = dedupeLocalAppData(merged);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(deduped));
 
   return {
     status: 'ok',
-    data: merged,
+    data: deduped,
     sharedStats: true,
     remoteFound: hasRows,
   };
 }
 
 export async function saveData(data: AppData): Promise<SaveResult> {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  const deduped = dedupeLocalAppData(data);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(deduped));
   const client = getSupabaseClient();
   if (!client) {
     warnIfRemoteStorageDisabled();
@@ -292,7 +299,7 @@ export async function saveData(data: AppData): Promise<SaveResult> {
   }
 
   const deviceId = getDeviceStateId();
-  const error = await upsertAppData(client, data, deviceId);
+  const error = await upsertAppData(client, deduped, deviceId);
 
   if (error) {
     console.error('Failed to sync app data to Supabase:', error);

@@ -106,6 +106,10 @@ drop policy if exists "Public update finska_players" on public.finska_players;
 create policy "Public update finska_players"
 on public.finska_players for update to anon using (true) with check (true);
 
+drop policy if exists "Public delete finska_players" on public.finska_players;
+create policy "Public delete finska_players"
+on public.finska_players for delete to anon using (true);
+
 drop policy if exists "Public read finska_matches" on public.finska_matches;
 create policy "Public read finska_matches"
 on public.finska_matches for select to anon using (true);

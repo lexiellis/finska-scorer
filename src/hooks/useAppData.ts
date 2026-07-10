@@ -4,6 +4,7 @@ import { applyFinskaScore } from '../scoring';
 import {
   clearLocalAppData,
   createId,
+  dedupeLocalAppData,
   getDeviceId,
   initialSyncStatus,
   isRemoteStorageConfigured,
@@ -93,7 +94,7 @@ export function useAppData() {
       }
 
       setSyncStatus({ ...nextSync, deviceId: nextSync.deviceId });
-      setData(imported.data);
+      setData(dedupeLocalAppData(imported.data));
       setIsHydrated(true);
     }
 
@@ -118,7 +119,7 @@ export function useAppData() {
   }, [data, isHydrated]);
 
   const update = useCallback((fn: (prev: AppData) => AppData) => {
-    setData((prev) => fn(prev));
+    setData((prev) => dedupeLocalAppData(fn(prev)));
   }, []);
 
   const addPlayer = useCallback((name: string) => {

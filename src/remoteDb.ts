@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { dedupePlayersByName } from './dedupePlayers';
 import type { AppData, Game, Match, Player, Shot } from './types';
 
 const RELATIONAL_MIGRATED_KEY = 'finska-relational-v1';
@@ -116,7 +117,7 @@ export function mergeAppDataSources(
     games = [...gameMap.values()];
   }
 
-  return { players, matches, games, shots };
+  return dedupePlayersByName({ players, matches, games, shots }).data;
 }
 
 /** Prefer local active session for this device; union everything else. */
@@ -294,20 +295,31 @@ export async function upsertAppData(
   data: AppData,
   deviceId: string,
 ): Promise<string | null> {
-  const games = syncableGames(data.games, deviceId).map((g) =>
+  const { data: deduped, droppedPlayerIds } = dedupePlayersByName(data);
+  const games = syncableGames(deduped.games, deviceId).map((g) =>
     g.scribeDeviceId ? g : { ...g, scribeDeviceId: deviceId },
   );
   const gameIds = new Set(games.map((g) => g.id));
   const matchIds = new Set(games.map((g) => g.matchId).filter(Boolean) as string[]);
-  const matches = data.matches.filter((m) => matchIds.has(m.id) || m.endedAt !== null);
-  const shots = data.shots.filter((s) => gameIds.has(s.gameId));
+  const matches = deduped.matches.filter((m) => matchIds.has(m.id) || m.endedAt !== null);
+  const shots = deduped.shots.filter((s) => gameIds.has(s.gameId));
 
   let err = await batchUpsert(
     supabase,
     'finska_players',
-    data.players.map((p) => toPlayerRow(p) as unknown as Record<string, unknown>),
+    deduped.players.map((p) => toPlayerRow(p) as unknown as Record<string, unknown>),
   );
   if (err) return err;
+
+  if (droppedPlayerIds.length > 0) {
+    const { error: deleteError } = await supabase
+      .from('finska_players')
+      .delete()
+      .in('id', droppedPlayerIds);
+    if (deleteError && !deleteError.message.includes('policy')) {
+      console.warn('Could not delete duplicate player rows:', deleteError.message);
+    }
+  }
 
   err = await batchUpsert(
     supabase,
@@ -362,7 +374,7 @@ export async function fetchRelationalAppData(
   );
   const gameIds = new Set(games.map((g) => g.id));
 
-  const data: AppData = {
+  const data: AppData = dedupePlayersByName({
     players: (playersRes.data as PlayerRow[] | null)?.map(fromPlayerRow) ?? [],
     matches: (matchesRes.data as MatchRow[] | null)?.map(fromMatchRow) ?? [],
     games,
@@ -370,7 +382,7 @@ export async function fetchRelationalAppData(
       (shotsRes.data as ShotRow[] | null)
         ?.map(fromShotRow)
         .filter((s) => gameIds.has(s.gameId)) ?? [],
-  };
+  }).data;
 
   return { data, error: null };
 }
