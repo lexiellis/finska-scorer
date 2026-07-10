@@ -198,7 +198,7 @@ export function ShotLogForm({
                 className="btn dark log-btn"
                 onClick={() => setShowHistory(false)}
               >
-                Throw input
+                Log throws
               </button>
               {canLog && (
                 <button
