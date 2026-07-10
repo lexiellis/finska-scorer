@@ -23,7 +23,7 @@ function syncStatusMessage(sync: SyncStatus, playerCount: number, shotCount: num
   const shortId = sync.deviceId.slice(0, 8);
 
   if (sync.mode === 'local') {
-    return `This device only — data stays in this browser (id ${shortId}…).`;
+    return `This phone/browser only — data is not shared with other devices (id ${shortId}…).`;
   }
 
   if (sync.error) {
@@ -36,7 +36,7 @@ function syncStatusMessage(sync: SyncStatus, playerCount: number, shotCount: num
 
   const summary = `${playerCount} players, ${shotCount} throws`;
   if (sync.lastSaveOk) {
-    return `This device (${shortId}…) — ${summary}. Each phone keeps its own data.`;
+    return `This phone only — ${summary}. Backed up to your device row (${shortId}…), not shared with other phones.`;
   }
 
   if (sync.remoteRowFound === false) {

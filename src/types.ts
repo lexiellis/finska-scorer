@@ -63,21 +63,35 @@ export interface Game {
   id: string;
   mode: GameMode;
   teams: Team[];
-  /** Player ids in throw rotation order (stats sessions and FFA games). */
+  /** Player ids in throw rotation order. */
   throwOrder?: string[];
   scores: Record<string, number>;
   eliminatedTeamIds: string[];
   winnerTeamId: string | null;
   startedAt: string;
   endedAt: string | null;
+  matchId?: string;
+  gameNumber?: number;
   /** @deprecated Migrated from pre-team games */
   playerIds?: string[];
   /** @deprecated Use winnerTeamId */
   winnerId?: string | null;
 }
 
+export interface Match {
+  id: string;
+  teams: Team[];
+  /** Team ids in rotation order. */
+  teamOrder: string[];
+  /** teamId → player ids in throw order within that team. */
+  playerOrder: Record<string, string[]>;
+  startedAt: string;
+  endedAt: string | null;
+}
+
 export interface AppData {
   players: Player[];
+  matches: Match[];
   games: Game[];
   shots: Shot[];
 }

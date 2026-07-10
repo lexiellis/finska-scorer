@@ -213,6 +213,7 @@ export function importLogCsv(
   return {
     data: {
       players,
+      matches: base.matches ?? [],
       games,
       shots: [...existingShots, ...shots],
     },
@@ -223,7 +224,7 @@ export function importLogCsv(
 }
 
 function emptyAppData(): AppData {
-  return { players: [], games: [], shots: [] };
+  return { players: [], matches: [], games: [], shots: [] };
 }
 
 export async function importBundledMolkkyLog(

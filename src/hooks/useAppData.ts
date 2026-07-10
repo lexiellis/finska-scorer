@@ -14,13 +14,18 @@ import {
   type SyncStatus,
 } from '../storage';
 import {
+  defaultPlayerOrder,
+  defaultTeamOrder,
+  teamsWithPlayerOrder,
+} from '../match';
+import {
   buildThrowOrder,
   getNextThrowPlayer,
   getTeamForPlayer,
   isMissOutcome,
   recomputeGameState,
 } from '../teams';
-import type { AppData, Distance, Game, Outcome, Player, Shot, ShotType, Team } from '../types';
+import type { AppData, Distance, Game, Match, Outcome, Player, Shot, ShotType, Team } from '../types';
 
 function recalculateShotScores(game: Game, shots: Shot[]): Shot[] {
   const ordered = [...shots].sort((a, b) => a.recordedAt.localeCompare(b.recordedAt));
@@ -50,7 +55,7 @@ export function useAppData() {
 
     async function hydrate() {
       const needsFreshImport = getImportDataVersion() !== IMPORT_DATA_VERSION;
-      let loaded: AppData = { players: [], games: [], shots: [] };
+      let loaded: AppData = { players: [], matches: [], games: [], shots: [] };
       let nextSync = initialSyncStatus();
 
       if (!needsFreshImport) {
@@ -130,23 +135,106 @@ export function useAppData() {
     }));
   }, [update]);
 
-  const startGame = useCallback((teams: Team[]) => {
-    if (teams.length < 2 || teams.some((t) => t.playerIds.length < 1)) return null;
-    const scores = Object.fromEntries(teams.map((t) => [t.id, 0]));
-    const game: Game = {
-      id: createId(),
-      mode: 'game',
-      teams,
-      throwOrder: buildThrowOrder(teams),
-      scores,
-      eliminatedTeamIds: [],
-      winnerTeamId: null,
-      startedAt: new Date().toISOString(),
-      endedAt: null,
-    };
-    update((prev) => ({ ...prev, games: [...prev.games, game] }));
-    return game;
+  const startMatchGame = useCallback(
+    (params: {
+      teams: Team[];
+      teamOrder: string[];
+      playerOrder: Record<string, string[]>;
+      startingTeamId: string;
+      matchId?: string;
+      gameNumber: number;
+    }) => {
+      const { teams, teamOrder, playerOrder, startingTeamId, matchId, gameNumber } = params;
+      if (teams.length < 2) return null;
+
+      const orderedTeams = teamsWithPlayerOrder(teams, playerOrder);
+      const scores = Object.fromEntries(orderedTeams.map((t) => [t.id, 0]));
+      const throwOrder = buildThrowOrder(
+        orderedTeams,
+        teamOrder,
+        playerOrder,
+        startingTeamId,
+      );
+
+      const game: Game = {
+        id: createId(),
+        mode: 'game',
+        teams: orderedTeams,
+        throwOrder,
+        scores,
+        eliminatedTeamIds: [],
+        winnerTeamId: null,
+        startedAt: new Date().toISOString(),
+        endedAt: null,
+        matchId,
+        gameNumber,
+      };
+
+      update((prev) => {
+        let matches = prev.matches;
+        let resolvedMatchId = matchId;
+
+        if (!resolvedMatchId) {
+          const match: Match = {
+            id: createId(),
+            teams: orderedTeams,
+            teamOrder: [...teamOrder],
+            playerOrder: { ...playerOrder },
+            startedAt: new Date().toISOString(),
+            endedAt: null,
+          };
+          matches = [...matches, match];
+          resolvedMatchId = match.id;
+          game.matchId = resolvedMatchId;
+        } else {
+          matches = matches.map((m) =>
+            m.id === resolvedMatchId
+              ? {
+                  ...m,
+                  teams: orderedTeams,
+                  teamOrder: [...teamOrder],
+                  playerOrder: { ...playerOrder },
+                }
+              : m,
+          );
+        }
+
+        return {
+          ...prev,
+          matches,
+          games: [...prev.games, { ...game, matchId: resolvedMatchId }],
+        };
+      });
+
+      return game;
+    },
+    [update],
+  );
+
+  const endMatch = useCallback((matchId: string) => {
+    update((prev) => ({
+      ...prev,
+      matches: prev.matches.map((m) =>
+        m.id === matchId ? { ...m, endedAt: new Date().toISOString() } : m,
+      ),
+    }));
   }, [update]);
+
+  /** @deprecated Use startMatchGame via order setup */
+  const startGame = useCallback(
+    (teams: Team[]) => {
+      const teamOrder = defaultTeamOrder(teams);
+      const playerOrder = defaultPlayerOrder(teams);
+      return startMatchGame({
+        teams,
+        teamOrder,
+        playerOrder,
+        startingTeamId: teamOrder[0]!,
+        gameNumber: 1,
+      });
+    },
+    [startMatchGame],
+  );
 
   const startStatsSession = useCallback((playerIds: string[]) => {
     if (playerIds.length < 1) return null;
@@ -192,11 +280,21 @@ export function useAppData() {
   }, [update]);
 
   const abandonGame = useCallback((gameId: string) => {
-    update((prev) => ({
-      ...prev,
-      games: prev.games.filter((g) => g.id !== gameId),
-      shots: prev.shots.filter((s) => s.gameId !== gameId),
-    }));
+    update((prev) => {
+      const game = prev.games.find((g) => g.id === gameId);
+      const matchId = game?.matchId;
+      return {
+        ...prev,
+        games: prev.games.filter((g) => g.id !== gameId),
+        shots: prev.shots.filter((s) => s.gameId !== gameId),
+        matches:
+          matchId && !prev.games.some((g) => g.matchId === matchId && g.id !== gameId)
+            ? prev.matches.map((m) =>
+                m.id === matchId ? { ...m, endedAt: new Date().toISOString() } : m,
+              )
+            : prev.matches,
+      };
+    });
   }, [update]);
 
   const logShot = useCallback(
@@ -386,7 +484,7 @@ export function useAppData() {
   const resetToImportedLog = useCallback(async () => {
     clearLocalAppData();
     const imported = await importBundledMolkkyLog(
-      { players: [], games: [], shots: [] },
+      { players: [], matches: [], games: [], shots: [] },
       { freshImport: true },
     );
     setImportDataVersion(IMPORT_DATA_VERSION);
@@ -409,6 +507,8 @@ export function useAppData() {
     addPlayer,
     removePlayer,
     startGame,
+    startMatchGame,
+    endMatch,
     startStatsSession,
     endStatsSession,
     endGame,

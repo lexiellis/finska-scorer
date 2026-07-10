@@ -9,7 +9,7 @@ interface TeamDraft {
 
 interface TeamSetupProps {
   players: Player[];
-  onStart: (teams: Team[]) => void;
+  onTeamsReady: (teams: Team[]) => void;
 }
 
 function defaultTeams(): TeamDraft[] {
@@ -19,7 +19,7 @@ function defaultTeams(): TeamDraft[] {
   ];
 }
 
-export function TeamSetup({ players, onStart }: TeamSetupProps) {
+export function TeamSetup({ players, onTeamsReady }: TeamSetupProps) {
   const [teams, setTeams] = useState<TeamDraft[]>(defaultTeams);
 
   const assignedIds = new Set(teams.flatMap((t) => t.playerIds));
@@ -103,7 +103,7 @@ export function TeamSetup({ players, onStart }: TeamSetupProps) {
         className="btn primary large"
         disabled={!canStart}
         onClick={() =>
-          onStart(
+          onTeamsReady(
             teams.map((t) => ({
               id: t.id,
               name: '',
@@ -112,7 +112,7 @@ export function TeamSetup({ players, onStart }: TeamSetupProps) {
           )
         }
       >
-        Start
+        Next — set throw order
       </button>
     </section>
   );

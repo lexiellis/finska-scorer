@@ -1,4 +1,10 @@
 import { useEffect, useState } from 'react';
+import {
+  defaultPlayerOrder,
+  defaultTeamOrder,
+  getMatchGames,
+  getStartingTeamForGame,
+} from '../match';
 import { scoreEventMessage } from '../scoring';
 import { getActiveGame } from '../stats';
 import {
@@ -12,8 +18,10 @@ import {
   teamDisplayName,
 } from '../teams';
 import type { AppData, Distance, Game, Outcome, ShotType, Team } from '../types';
-import { SessionSetup } from './SessionSetup';
+import { MatchSummary } from './MatchSummary';
+import { OrderSetup } from './OrderSetup';
 import { SessionHistory } from './SessionHistory';
+import { SessionSetup } from './SessionSetup';
 import { ShotLogForm } from './ShotLogForm';
 
 interface LogShotResult {
@@ -24,12 +32,30 @@ interface LogShotResult {
   nextPlayerId: string | null;
 }
 
+interface OrderSetupState {
+  teams: Team[];
+  teamOrder: string[];
+  playerOrder: Record<string, string[]>;
+  gameNumber: number;
+  matchId: string | null;
+  startingTeamId: string;
+  startingTeamHint?: string;
+}
+
 interface GamePanelProps {
   data: AppData;
-  onStartGame: (teams: Team[]) => void;
+  onStartMatchGame: (params: {
+    teams: Team[];
+    teamOrder: string[];
+    playerOrder: Record<string, string[]>;
+    startingTeamId: string;
+    matchId?: string;
+    gameNumber: number;
+  }) => Game | null;
   onStartStatsSession: (playerIds: string[]) => void;
   onEndGame: (gameId: string, winnerTeamId: string) => void;
   onEndStatsSession: (gameId: string) => void;
+  onEndMatch: (matchId: string) => void;
   onAbandonGame: (gameId: string) => void;
   onLogShot: (params: {
     gameId: string;
@@ -48,10 +74,11 @@ interface GamePanelProps {
 
 export function GamePanel({
   data,
-  onStartGame,
+  onStartMatchGame,
   onStartStatsSession,
   onEndGame,
   onEndStatsSession,
+  onEndMatch,
   onAbandonGame,
   onLogShot,
   onUndo,
@@ -68,10 +95,15 @@ export function GamePanel({
   const [completedGameId, setCompletedGameId] = useState<string | null>(null);
   const [showEndMenu, setShowEndMenu] = useState(false);
   const [viewingSessionHistory, setViewingSessionHistory] = useState(false);
+  const [orderSetup, setOrderSetup] = useState<OrderSetupState | null>(null);
 
   const completedGame = completedGameId
     ? data.games.find((g) => g.id === completedGameId)
     : null;
+  const completedMatch =
+    completedGame?.matchId != null
+      ? data.matches.find((m) => m.id === completedGame.matchId)
+      : null;
 
   useEffect(() => {
     if (!activeGame) {
@@ -95,9 +127,6 @@ export function GamePanel({
           : getFirstThrowPlayer(activeGame),
       );
     }
-    if (!activeGame && !completedGameId) {
-      setShowEndMenu(false);
-    }
   }, [activeGame, activePlayerId, completedGameId, data.shots]);
 
   useEffect(() => {
@@ -105,6 +134,63 @@ export function GamePanel({
       setDistance(3);
     }
   }, [distance, shotType]);
+
+  const openOrderSetupForNewMatch = (teams: Team[]) => {
+    const teamOrder = defaultTeamOrder(teams);
+    const playerOrder = defaultPlayerOrder(teams);
+    setOrderSetup({
+      teams,
+      teamOrder,
+      playerOrder,
+      gameNumber: 1,
+      matchId: null,
+      startingTeamId: teamOrder[0]!,
+    });
+  };
+
+  const openOrderSetupForNextGame = (matchId: string) => {
+    const match = data.matches.find((m) => m.id === matchId);
+    if (!match) return;
+    const played = getMatchGames(data, matchId);
+    const nextGameNumber = played.length + 1;
+    const startingTeamId = getStartingTeamForGame(data, match, nextGameNumber);
+    const starterName = teamDisplayName(
+      match.teams.find((t) => t.id === startingTeamId)!,
+      data.players,
+    );
+    const hint =
+      [3, 5, 7, 9].includes(nextGameNumber)
+        ? ` ${starterName} throws first (most small points).`
+        : undefined;
+
+    setOrderSetup({
+      teams: match.teams,
+      teamOrder: [...match.teamOrder],
+      playerOrder: { ...match.playerOrder },
+      gameNumber: nextGameNumber,
+      matchId,
+      startingTeamId,
+      startingTeamHint: hint,
+    });
+    setCompletedGameId(null);
+  };
+
+  const handleOrderConfirm = (teamOrder: string[], playerOrder: Record<string, string[]>) => {
+    if (!orderSetup) return;
+    const startingTeamId =
+      orderSetup.gameNumber === 1 && !orderSetup.startingTeamHint
+        ? teamOrder[0]!
+        : orderSetup.startingTeamId;
+    onStartMatchGame({
+      teams: orderSetup.teams,
+      teamOrder,
+      playerOrder,
+      startingTeamId,
+      matchId: orderSetup.matchId ?? undefined,
+      gameNumber: orderSetup.gameNumber,
+    });
+    setOrderSetup(null);
+  };
 
   const handleOutcome = (value: Outcome) => {
     setOutcome(value);
@@ -199,6 +285,39 @@ export function GamePanel({
     }
   };
 
+  if (orderSetup) {
+    return (
+      <div className="panel">
+        <OrderSetup
+          teams={orderSetup.teams}
+          players={data.players}
+          gameNumber={orderSetup.gameNumber}
+          initialTeamOrder={orderSetup.teamOrder}
+          initialPlayerOrder={orderSetup.playerOrder}
+          startingTeamId={orderSetup.startingTeamId}
+          startingTeamHint={orderSetup.startingTeamHint}
+          onConfirm={handleOrderConfirm}
+          onCancel={() => setOrderSetup(null)}
+        />
+      </div>
+    );
+  }
+
+  if (completedGame?.endedAt && completedMatch) {
+    return (
+      <MatchSummary
+        data={data}
+        match={completedMatch}
+        completedGame={completedGame}
+        onPlayAgain={() => openOrderSetupForNextGame(completedMatch.id)}
+        onEndMatch={() => {
+          onEndMatch(completedMatch.id);
+          setCompletedGameId(null);
+        }}
+      />
+    );
+  }
+
   if (completedGame?.endedAt) {
     if (isStatsSession(completedGame)) {
       const throwCount = data.shots.filter((s) => s.gameId === completedGame.id).length;
@@ -269,7 +388,7 @@ export function GamePanel({
             {!viewingSessionHistory && (
               <SessionSetup
                 players={data.players}
-                onStartGame={onStartGame}
+                onTeamsReady={openOrderSetupForNewMatch}
                 onStartStatsSession={onStartStatsSession}
               />
             )}
@@ -309,10 +428,15 @@ export function GamePanel({
           game={activeGame}
           players={data.players}
           onClose={() => setShowEndMenu(false)}
-          onEndGame={onEndGame}
+          onEndGame={(gameId, winnerTeamId) => {
+            onEndGame(gameId, winnerTeamId);
+            setCompletedGameId(gameId);
+            setShowEndMenu(false);
+          }}
           onEndStatsSession={(id) => {
             onEndStatsSession(id);
             setCompletedGameId(id);
+            setShowEndMenu(false);
           }}
           onAbandon={onAbandonGame}
         />

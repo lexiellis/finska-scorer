@@ -38,20 +38,41 @@ function getActiveThrowOrder(game: Game): string[] {
   return getActiveTeams(game).flatMap((t) => t.playerIds);
 }
 
-/** Flat throw rotation: teams alternate, players rotate within each team. */
-export function buildThrowOrder(teams: Team[]): string[] {
-  if (teams.length === 0) return [];
-  const teamShotCounts = Object.fromEntries(teams.map((t) => [t.id, 0]));
-  const order: string[] = [];
-  let lastTeamIdx = teams.length - 1;
-  const maxIterations = 600;
+/** Flat throw rotation: teams alternate in teamOrder; players rotate within each team. */
+export function buildThrowOrder(
+  teams: Team[],
+  teamOrder: string[],
+  playerOrder: Record<string, string[]>,
+  startingTeamId?: string,
+): string[] {
+  if (teams.length === 0 || teamOrder.length === 0) return [];
 
-  for (let i = 0; i < maxIterations; i++) {
-    const nextTeamIdx = (lastTeamIdx + 1) % teams.length;
-    const team = teams[nextTeamIdx]!;
+  let orderedTeamIds = teamOrder.filter((id) => teams.some((t) => t.id === id));
+  if (orderedTeamIds.length === 0) return [];
+
+  if (startingTeamId && orderedTeamIds.includes(startingTeamId)) {
+    const idx = orderedTeamIds.indexOf(startingTeamId);
+    orderedTeamIds = [...orderedTeamIds.slice(idx), ...orderedTeamIds.slice(0, idx)];
+  }
+
+  const teamById = Object.fromEntries(teams.map((t) => [t.id, t]));
+  const orderedTeams = orderedTeamIds
+    .map((id) => teamById[id])
+    .filter((t): t is Team => Boolean(t));
+
+  const teamShotCounts = Object.fromEntries(orderedTeams.map((t) => [t.id, 0]));
+  const order: string[] = [];
+  let lastTeamIdx = orderedTeams.length - 1;
+
+  for (let i = 0; i < 600; i++) {
+    const nextTeamIdx = (lastTeamIdx + 1) % orderedTeams.length;
+    const team = orderedTeams[nextTeamIdx]!;
     const count = teamShotCounts[team.id] ?? 0;
-    const playerIdx = count % team.playerIds.length;
-    const playerId = team.playerIds[playerIdx];
+    const rotation =
+      playerOrder[team.id]?.filter((id) => team.playerIds.includes(id)) ?? team.playerIds;
+    if (rotation.length === 0) break;
+    const playerIdx = count % rotation.length;
+    const playerId = rotation[playerIdx];
     if (!playerId) break;
     order.push(playerId);
     teamShotCounts[team.id] = count + 1;

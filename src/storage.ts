@@ -1,4 +1,5 @@
 import type { AppData, Distance, Game, Outcome, Player, ShotType } from './types';
+import { defaultPlayerOrder, defaultTeamOrder } from './match';
 import { buildThrowOrder } from './teams';
 import { createClient } from '@supabase/supabase-js';
 
@@ -14,6 +15,7 @@ type SupabaseStateRow = {
 
 const emptyData = (): AppData => ({
   players: [],
+  matches: [],
   games: [],
   shots: [],
 });
@@ -38,7 +40,9 @@ function migrateThrowOrder(game: Game): string[] | undefined {
   if (game.throwOrder?.length) return game.throwOrder;
   const teams = game.teams ?? [];
   if (teams.length === 0) return undefined;
-  return buildThrowOrder(teams);
+  const teamOrder = defaultTeamOrder(teams);
+  const playerOrder = defaultPlayerOrder(teams);
+  return buildThrowOrder(teams, teamOrder, playerOrder);
 }
 
 function migrateGame(raw: Game, players: Player[]): Game {
@@ -90,6 +94,7 @@ function migrate(data: AppData): AppData {
   const players = data.players ?? [];
   return {
     ...data,
+    matches: data.matches ?? [],
     games: (data.games ?? []).map((g) => migrateGame(g, players)),
     shots: (data.shots ?? []).map((s) => ({
       ...s,

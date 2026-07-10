@@ -6,13 +6,13 @@ type SessionMode = 'stats' | 'game';
 
 interface SessionSetupProps {
   players: Player[];
-  onStartGame: (teams: Team[]) => void;
+  onTeamsReady: (teams: Team[]) => void;
   onStartStatsSession: (playerIds: string[]) => void;
 }
 
 export function SessionSetup({
   players,
-  onStartGame,
+  onTeamsReady,
   onStartStatsSession,
 }: SessionSetupProps) {
   const [mode, setMode] = useState<SessionMode>('stats');
@@ -70,7 +70,7 @@ export function SessionSetup({
           </button>
         </>
       ) : (
-        <TeamSetup players={players} onStart={onStartGame} />
+        <TeamSetup players={players} onTeamsReady={onTeamsReady} />
       )}
     </section>
   );
