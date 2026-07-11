@@ -34,7 +34,8 @@ export type Outcome = (typeof OUTCOMES)[number];
 
 export type Tab = 'game' | 'stats' | 'players';
 
-export type GameMode = 'game' | 'stats';
+/** `stats` is a legacy stored value now called `practice`. */
+export type GameMode = 'game' | 'practice' | 'stats';
 
 export interface Player {
   id: string;

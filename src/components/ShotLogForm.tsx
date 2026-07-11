@@ -231,7 +231,7 @@ export function ShotLogForm({
             type="button"
             className="btn-icon log-footer-icon"
             onClick={onEnd}
-            aria-label="End session"
+            aria-label="End practice or game"
           >
             ⋯
           </button>

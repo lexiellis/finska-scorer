@@ -10,9 +10,11 @@ export function isMissOutcome(outcome: Outcome, score: number | null): boolean {
   return score === 0 || outcome === 'Miss' || outcome === 'Wrong Pin';
 }
 
-export function isStatsSession(game: Game): boolean {
-  return game.mode === 'stats';
+export function isPracticeSession(game: Game): boolean {
+  return game.mode === 'practice' || game.mode === 'stats';
 }
+/** @deprecated Use isPracticeSession */
+export const isStatsSession = isPracticeSession;
 
 export function getGamePlayerIds(game: Game): string[] {
   return game.teams.flatMap((t) => t.playerIds);
@@ -109,9 +111,9 @@ export function getNextThrowPlayer(
   if (game.throwOrder?.length) {
     const order = getActiveThrowOrder(game);
     if (order.length === 0) return null;
-    if (!lastPlayerId) return order[0] ?? null;
-    const idx = order.indexOf(lastPlayerId);
-    const nextIdx = idx < 0 ? 0 : (idx + 1) % order.length;
+    const gameShots = getGameShots(game, shots);
+    if (gameShots.length === 0 && !lastPlayerId) return order[0] ?? null;
+    const nextIdx = gameShots.length % order.length;
     return order[nextIdx] ?? null;
   }
 

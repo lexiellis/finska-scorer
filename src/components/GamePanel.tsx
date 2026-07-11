@@ -317,7 +317,7 @@ export function GamePanel({
       const throwCount = data.shots.filter((s) => s.gameId === completedGame.id).length;
       return (
         <div className="panel panel-done">
-          <p className="flash-win">Session ended — {throwCount} throws logged</p>
+          <p className="flash-win">Practice ended — {throwCount} throws logged</p>
           <button
             type="button"
             className="btn primary large"
@@ -467,13 +467,13 @@ function EndMenu({
               className="menu-item"
               onClick={() => onEndStatsSession(game.id)}
             >
-              End session
+              End practice
             </button>
             <button
               type="button"
               className="menu-item danger"
               onClick={() => {
-                if (confirm('Discard session?')) onAbandon(game.id);
+                if (confirm('Discard practice?')) onAbandon(game.id);
               }}
             >
               Discard

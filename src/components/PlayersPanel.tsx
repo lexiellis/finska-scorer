@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { AppData } from '../types';
 import type { SyncStatus } from '../storage';
-import { getPlayerThrowCount } from '../stats';
+import { getPlayerThrowCount, getTrackedShots } from '../stats';
 
 interface PlayersPanelProps {
   data: AppData;
@@ -36,11 +36,11 @@ function syncStatusMessage(sync: SyncStatus, playerCount: number, shotCount: num
 
   const summary = `${playerCount} players, ${shotCount} throws`;
   if (sync.lastSaveOk && sync.sharedStats) {
-    return `Shared stats — ${summary}. Only this phone logs the active session (${shortId}…).`;
+    return `Shared stats — ${summary}. Only this phone logs the active practice/game (${shortId}…).`;
   }
 
   if (sync.lastSaveOk) {
-    return `Synced — ${summary}. Active sessions stay on this phone (${shortId}…).`;
+    return `Synced — ${summary}. Active practice/game stays on this phone (${shortId}…).`;
   }
 
   if (sync.remoteRowFound === false) {
@@ -58,7 +58,8 @@ export function PlayersPanel({
   onImportCsv,
   onResetToImportedLog,
 }: PlayersPanelProps) {
-  const { players, shots } = data;
+  const { players } = data;
+  const trackedShots = getTrackedShots(data);
   const [name, setName] = useState('');
   const [importMessage, setImportMessage] = useState('');
   const [resetting, setResetting] = useState(false);
@@ -78,7 +79,7 @@ export function PlayersPanel({
 
       <div className={`storage-status ${syncStatusClass(syncStatus)}`} role="status">
         <strong>Data storage</strong>
-        <p>{syncStatusMessage(syncStatus, players.length, shots.length)}</p>
+        <p>{syncStatusMessage(syncStatus, players.length, trackedShots.length)}</p>
       </div>
 
       <form
@@ -130,7 +131,7 @@ export function PlayersPanel({
       <section className="import-section">
         <h3 className="field-label">Import spreadsheet log</h3>
         <p className="import-hint">
-          Upload a Log.csv export (stats session). Pin counts are left blank unless you enter them
+          Upload a Log.csv export (practice session). Pin counts are left blank unless you enter them
           when logging new throws.
         </p>
         <label className="btn secondary import-file-btn">

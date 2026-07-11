@@ -1,4 +1,4 @@
-import { isStatsSession, teamDisplayName } from './teams';
+import { isPracticeSession, isStatsSession, teamDisplayName } from './teams';
 import { getDeviceId } from './storage';
 import type { AppData, Distance, Game, Outcome, Player, Shot, ShotType } from './types';
 import { DISTANCES, OUTCOMES, ALL_SHOT_TYPES } from './types';
@@ -94,6 +94,13 @@ function initOutcomeCounts(): Record<Outcome, number> {
 
 const DISTANCE_KEYS = DISTANCES.map((d) => (typeof d === 'string' ? d : String(d)));
 
+export function getTrackedShots(data: AppData): Shot[] {
+  const practiceGameIds = new Set(
+    data.games.filter((g) => isPracticeSession(g)).map((g) => g.id),
+  );
+  return data.shots.filter((s) => !practiceGameIds.has(s.gameId));
+}
+
 function distanceSortIndex(label: string): number {
   if (label.endsWith('+')) return 100;
   const n = Number(label.replace(/m$/i, ''));
@@ -105,7 +112,7 @@ function sortDistanceLabels(a: string, b: string): number {
 }
 
 export function getPlayerShots(data: AppData, playerId: string): Shot[] {
-  return data.shots.filter((s) => s.playerId === playerId);
+  return getTrackedShots(data).filter((s) => s.playerId === playerId);
 }
 
 function outcomeRate(shots: Shot[], predicate: (shot: Shot) => boolean): number | null {
@@ -216,12 +223,13 @@ export function computePlayerStats(data: AppData, playerId: string): PlayerStats
 
 export function computeAllPlayersStats(data: AppData): PlayerStats | null {
   if (data.players.length === 0) return null;
+  const trackedShots = getTrackedShots(data);
   const player: Player = {
     id: '__all__',
     name: 'All players',
     createdAt: '',
   };
-  return computeStatsFromShots(player, data.shots);
+  return computeStatsFromShots(player, trackedShots);
 }
 
 function computeStatsFromShots(player: Player, shots: Shot[]): PlayerStats {
@@ -307,7 +315,7 @@ function computeStatsFromShots(player: Player, shots: Shot[]): PlayerStats {
 }
 
 export function getPlayerThrowCount(data: AppData, playerId: string): number {
-  return data.shots.filter((s) => s.playerId === playerId).length;
+  return getPlayerShots(data, playerId).length;
 }
 
 export function getGameShots(data: AppData, gameId: string): Shot[] {
@@ -323,7 +331,7 @@ export function getEndedSessions(data: AppData): Game[] {
 export function formatSessionLabel(game: Game, players: Player[]): string {
   const teamLabels = game.teams.map((t) => teamDisplayName(t, players));
   if (isStatsSession(game)) {
-    return `Stats · ${teamLabels.join(', ')}`;
+    return `Practice · ${teamLabels.join(', ')}`;
   }
   if (game.winnerTeamId) {
     const winner = game.teams.find((t) => t.id === game.winnerTeamId);

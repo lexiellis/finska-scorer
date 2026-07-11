@@ -50,7 +50,7 @@ export function SessionHistory({ data, onDetailOpenChange, onUpdateShot }: Sessi
               {formatSessionDate(openSession.endedAt ?? openSession.startedAt)}
               {' · '}
               {shots.length} throws
-              {isStatsSession(openSession) ? ' · stats' : ' · game'}
+              {isStatsSession(openSession) ? ' · practice' : ' · game'}
             </p>
           </div>
         </div>

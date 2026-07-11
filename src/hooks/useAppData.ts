@@ -24,6 +24,7 @@ import {
   buildThrowOrder,
   getNextThrowPlayer,
   getTeamForPlayer,
+  isPracticeSession,
   isMissOutcome,
   recomputeGameState,
   rotateTeamsStartingFirst,
@@ -251,14 +252,14 @@ export function useAppData() {
   const startStatsSession = useCallback((playerIds: string[]) => {
     if (playerIds.length < 1) return null;
     const teams: Team[] = playerIds.map((pid) => ({
-      id: pid,
+      id: createId(),
       name: '',
       playerIds: [pid],
     }));
     const scores = Object.fromEntries(teams.map((t) => [t.id, 0]));
     const game: Game = {
       id: createId(),
-      mode: 'stats',
+      mode: 'practice',
       teams,
       throwOrder: [...playerIds],
       scores,
@@ -332,7 +333,7 @@ export function useAppData() {
         const team = getTeamForPlayer(game, params.playerId);
         if (!team) return prev;
 
-        const isStats = game.mode === 'stats';
+        const isStats = isPracticeSession(game);
         const scoreBefore = isStats ? 0 : (game.scores[team.id] ?? 0);
         const isMiss = isMissOutcome(params.outcome, params.score);
 
@@ -419,7 +420,7 @@ export function useAppData() {
 
       const remainingShots = prev.shots.filter((s) => s.id !== last.id);
 
-      if (game.mode === 'stats') {
+      if (isPracticeSession(game)) {
         return {
           ...prev,
           shots: replaceGameShots(remainingShots, gameId, remainingShots.filter((s) => s.gameId === gameId)),
@@ -467,7 +468,7 @@ export function useAppData() {
           s.id === shotId ? { ...s, ...patch } : s,
         );
 
-        if (game.mode === 'stats') {
+        if (isPracticeSession(game)) {
           return {
             ...prev,
             shots: replaceGameShots(
