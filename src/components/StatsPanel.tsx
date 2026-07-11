@@ -193,29 +193,45 @@ function toRateRow(point: {
 }
 
 export function StatsPanel({ data }: StatsPanelProps) {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const activeGame = getActiveGame(data);
+  const sessionFilterId = activeGame ? `__session__:${activeGame.id}` : null;
+  const [selectedId, setSelectedId] = useState<string | null>(sessionFilterId);
   const [selectedShotType, setSelectedShotType] = useState<ShotType | 'ALL'>('ALL');
   const [rateView, setRateView] = useState<RateView>('success');
 
   useEffect(() => {
-    if (selectedId !== null && !data.players.some((p) => p.id === selectedId)) {
+    if (
+      selectedId !== null &&
+      !selectedId.startsWith('__session__:') &&
+      !data.players.some((p) => p.id === selectedId)
+    ) {
       setSelectedId(null);
     }
   }, [data.players, selectedId]);
 
-  const activeGame = getActiveGame(data);
   const activeSessionShots = activeGame ? getGameShots(data, activeGame.id) : [];
   const sessionStats = useMemo(
     () => (activeGame ? computeSessionStats(data, activeGame.id) : null),
     [activeGame, data],
   );
 
+  useEffect(() => {
+    if (!activeGame && selectedId?.startsWith('__session__:')) {
+      setSelectedId(null);
+      return;
+    }
+    if (activeGame && selectedId?.startsWith('__session__:') && selectedId !== sessionFilterId) {
+      setSelectedId(sessionFilterId);
+    }
+  }, [activeGame, selectedId, sessionFilterId]);
+
   const stats = useMemo(() => {
     if (data.players.length === 0) return null;
-    return selectedId === null
-      ? computeAllPlayersStats(data)
-      : computePlayerStats(data, selectedId);
-  }, [data, selectedId]);
+    if (selectedId?.startsWith('__session__:') && activeGame) {
+      return computeSessionStats(data, activeGame.id);
+    }
+    return selectedId === null ? computeAllPlayersStats(data) : computePlayerStats(data, selectedId);
+  }, [activeGame, data, selectedId]);
 
   const shotTypeFilters = stats?.distanceRatesByShotType ?? [];
 
@@ -301,9 +317,21 @@ export function StatsPanel({ data }: StatsPanelProps) {
         </section>
       )}
 
-      <p className="stats-scope-label">All-time</p>
+      <p className="stats-scope-label">
+        {selectedId?.startsWith('__session__:') ? 'Current session' : 'All-time'}
+      </p>
 
       <div className="player-chips">
+        {activeGame && (
+          <button
+            type="button"
+            className={`chip ${selectedId?.startsWith('__session__:') ? 'selected' : ''}`}
+            onClick={() => setSelectedId(`__session__:${activeGame.id}`)}
+          >
+            Session
+            <span className="chip-score">{activeSessionShots.length}</span>
+          </button>
+        )}
         <button
           type="button"
           className={`chip ${selectedId === null ? 'selected' : ''}`}
