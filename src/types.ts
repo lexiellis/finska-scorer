@@ -17,7 +17,7 @@ export type ShotType = SelectableShotType | 'Break';
 
 export const ALL_SHOT_TYPES: ShotType[] = [...SHOT_TYPES, 'Break'];
 
-export const DISTANCES = [3, 4, 5, 6, 7, 8, 9, '10+'] as const;
+export const DISTANCES = [4, 5, 6, 7, 8, '9+'] as const;
 
 export type Distance = (typeof DISTANCES)[number];
 

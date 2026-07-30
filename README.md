@@ -4,7 +4,7 @@ A touch-friendly web app for logging Finska throws on iPad (or any device). Trac
 
 ## Features
 
-- **Shot logging**: shot type, distance (3–10m+), score (0–12), outcome
+- **Shot logging**: shot type, distance (4–9m+), score (0–12), outcome
 - **Teams** — multiple players per team; shared team score and miss streak
 - **Live scores** with official Finska rules (first to **50** exactly; over 50 resets to **25**)
 - **Three-miss rule** — 3 consecutive misses (outcome: Miss) eliminates the team
@@ -71,7 +71,7 @@ If Supabase env vars are not set, the app still works in local-only mode using b
 | Field | Options |
 |-------|---------|
 | Shot type | Standard, Inertia, Retro, Elephant, Kick, Puikula, Bunch, Tuck, Crowd (Break is auto-tagged on the game's first scoring throw) |
-| Distance | 3–9 m, 10m+ |
+| Distance | 4–8 m, 9m+ |
 | Score | 0–12 (tap a circle) |
 | Outcome | Intended, So-so, Unintended, Miss, Wrong pin, Collateral |
 

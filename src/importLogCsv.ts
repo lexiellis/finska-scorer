@@ -73,12 +73,13 @@ function parseDistance(raw: string): Distance | null {
   if (!trimmed) return null;
   if (trimmed.endsWith('+')) {
     const label = trimmed.replace(/m$/i, '');
-    if (label === '10' || label === '11' || label === '12') return '10+';
+    if (label === '9' || label === '10' || label === '11' || label === '12') return '9+';
     return null;
   }
   const n = Number(trimmed.replace(/m$/i, ''));
   if (!Number.isFinite(n)) return null;
-  if (n >= 10) return '10+';
+  if (n >= 9) return '9+';
+  if (n <= 3) return 4;
   return DISTANCES.includes(n as Distance) ? (n as Distance) : null;
 }
 

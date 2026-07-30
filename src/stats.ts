@@ -4,7 +4,7 @@ import type { AppData, Distance, Game, Outcome, Player, Shot, ShotType } from '.
 import { DISTANCES, OUTCOMES, ALL_SHOT_TYPES } from './types';
 
 export function formatDistanceLabel(distance: Distance): string {
-  if (distance === '10+') return '10m+';
+  if (distance === '9+') return '9m+';
   return typeof distance === 'string' ? distance : `${distance}m`;
 }
 
@@ -121,7 +121,7 @@ function outcomeRate(shots: Shot[], predicate: (shot: Shot) => boolean): number 
 }
 
 function distanceNumericValue(distance: Shot['distance']): number {
-  if (distance === '10+') return 10;
+  if (distance === '9+') return 9;
   return distance;
 }
 

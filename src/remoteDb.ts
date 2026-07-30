@@ -248,10 +248,11 @@ function toShotRow(shot: Shot, deviceId: string): ShotRow {
 }
 
 function parseStoredDistance(value: string): Shot['distance'] {
-  if (value === '10+' || value === '12+') return '10+';
+  if (value === '9+' || value === '10+' || value === '12+') return '9+';
   const n = Number(value);
   if (Number.isFinite(n)) {
-    if (n >= 10) return '10+';
+    if (n >= 9) return '9+';
+    if (n <= 3) return 4;
     return n as Shot['distance'];
   }
   return value as Shot['distance'];

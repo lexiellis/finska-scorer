@@ -38,10 +38,24 @@ function normalizeBreakShots(data: AppData): AppData {
   return { ...data, shots };
 }
 
-function migrateDistance(distance: Distance | '9+' | '12+' | number | string): Distance {
-  if (distance === '9+' || distance === '12+') return '10+';
-  if (distance === 11 || distance === 12 || distance === '11' || distance === '12') return '10+';
-  if (distance === 10 || distance === '10') return '10+';
+function migrateDistance(distance: Distance | '9+' | '10+' | '12+' | number | string): Distance {
+  if (
+    distance === '9+' ||
+    distance === '10+' ||
+    distance === '12+' ||
+    distance === 9 ||
+    distance === '9' ||
+    distance === 10 ||
+    distance === '10' ||
+    distance === 11 ||
+    distance === '11' ||
+    distance === 12 ||
+    distance === '12'
+  ) {
+    return '9+';
+  }
+  // New scale starts at 4m; fold legacy 3m throws into 4m.
+  if (distance === 3 || distance === '3') return 4;
   return distance as Distance;
 }
 
@@ -121,7 +135,7 @@ function migrate(data: AppData): AppData {
       scoreAfter: s.scoreAfter ?? (s.score ?? 0),
       score: typeof s.score === 'number' ? s.score : null,
       shotType: migrateShotType(s.shotType as string),
-      distance: migrateDistance(s.distance as Distance | '9+' | '12+' | number | string),
+      distance: migrateDistance(s.distance as Distance | '9+' | '10+' | '12+' | number | string),
       outcome: migrateOutcome(s.outcome as string),
     })),
   };

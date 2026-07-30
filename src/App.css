@@ -145,10 +145,10 @@
   --log-btn-gap: 2px;
   /* Section height shares — proportional to button rows + tap target needs */
   --section-type-weight: 2.15;
-  --section-distance-weight: 3.2;
+  --section-distance-weight: 2.15;
   --section-score-weight: 3.4;
   --section-outcome-weight: 2.15;
-  --distance-cols: 4;
+  --distance-cols: 3;
   --distance-rows: 2;
   position: relative;
   flex: 1;
@@ -169,7 +169,7 @@
 @media (min-width: 768px) {
   .shot-log {
     --section-type-weight: 2.25;
-    --section-distance-weight: 2.65;
+    --section-distance-weight: 2.25;
     --section-score-weight: 3.5;
     --section-outcome-weight: 2.25;
   }
