@@ -131,8 +131,8 @@ export function PlayersPanel({
       <section className="import-section">
         <h3 className="field-label">Import spreadsheet log</h3>
         <p className="import-hint">
-          Upload a Log.csv export (practice session). Pin counts are left blank unless you enter them
-          when logging new throws.
+          Upload a Log.csv export (counts as real games in stats). Pin counts are left blank unless
+          you enter them when logging new throws.
         </p>
         <label className="btn secondary import-file-btn">
           Choose CSV

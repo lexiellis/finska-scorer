@@ -191,7 +191,7 @@ export function importLogCsv(
 
   const game: Game = {
     id: sessionId,
-    mode: 'stats',
+    mode: 'game',
     teams,
     throwOrder: teamPlayerIds,
     scores: Object.fromEntries(teams.map((t) => [t.id, 0])),
