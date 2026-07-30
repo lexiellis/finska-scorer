@@ -14,6 +14,8 @@ import { dedupePlayersByName } from './dedupePlayers';
 const STORAGE_KEY = 'finska-scorer-data';
 const IMPORT_VERSION_KEY = 'finska-import-version';
 const DEVICE_ID_KEY = 'finska-device-id';
+/** Same id as BUNDLED_LOG_SESSION_ID in importLogCsv (avoid circular import). */
+const CSV_IMPORT_GAME_ID = 'import-molkky-log-v1';
 
 const emptyData = (): AppData => ({
   players: [],
@@ -79,7 +81,14 @@ function migrateGame(raw: Game, players: Player[]): Game {
     storedMode === 'practice' && !raw.endedAt
       ? new Date().toISOString()
       : raw.endedAt;
-  const mode = storedMode === 'stats' ? 'stats' : 'game';
+  // Legacy CSV imports were stored as mode "stats" (practice); treat as real games
+  // so their throws appear in all-time stats / win-rate tracking.
+  const mode =
+    raw.id === CSV_IMPORT_GAME_ID
+      ? 'game'
+      : storedMode === 'stats'
+        ? 'stats'
+        : 'game';
 
   if (raw.teams?.length) {
     const migrated: Game = {

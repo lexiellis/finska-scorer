@@ -195,7 +195,8 @@ function toRateRow(point: {
 
 export function StatsPanel({ data }: StatsPanelProps) {
   const activeGame = getActiveGame(data);
-  const [scope, setScope] = useState<'all-time' | 'practice'>(activeGame ? 'practice' : 'all-time');
+  // Always default to all-time so an empty/in-progress session doesn't hide history.
+  const [scope, setScope] = useState<'all-time' | 'practice'>('all-time');
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [selectedShotType, setSelectedShotType] = useState<ShotType | 'ALL'>('ALL');
   const [rateView, setRateView] = useState<RateView>('success');

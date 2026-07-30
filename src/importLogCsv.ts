@@ -192,7 +192,7 @@ export function importLogCsv(
 
   const game: Game = {
     id: sessionId,
-    mode: 'stats',
+    mode: 'game',
     teams,
     throwOrder: teamPlayerIds,
     scores: Object.fromEntries(teams.map((t) => [t.id, 0])),
@@ -244,7 +244,9 @@ export async function importBundledMolkkyLog(
     const csv = await res.text();
     return importLogCsv(csv, existing, {
       sessionId: BUNDLED_LOG_SESSION_ID,
-      replaceExisting: true,
+      // Only replace on an intentional fresh import — otherwise every page load
+      // rewrote the CSV session as practice and pushed that back to Supabase.
+      replaceExisting: Boolean(options.freshImport),
       freshImport: options.freshImport,
     });
   } catch {
