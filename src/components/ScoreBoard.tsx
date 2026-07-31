@@ -22,11 +22,6 @@ interface ScoreBoardProps {
 
 const ACTIVE_PLAYER_ICON = '🫴';
 
-function getUpcomingPlayerForTeam(teamShots: Shot[], team: { playerIds: string[] }): string | null {
-  const playerIndex = teamShots.length % team.playerIds.length;
-  return team.playerIds[playerIndex] ?? null;
-}
-
 function formatPins(score: number | null): string {
   if (score === null) return '—';
   if (score === 0) return '·';
@@ -235,16 +230,14 @@ export function ScoreBoard({
     const total = liveScores[team.id] ?? 0;
     const eliminated = game.eliminatedTeamIds.includes(team.id);
     const teamThrowList = teamShots[teamIndex] ?? [];
-    const throwCount = teamThrowList.length;
-    const upcomingId = eliminated ? null : getUpcomingPlayerForTeam(teamThrowList, team);
-    const isActive = upcomingId !== null && activePlayerId === upcomingId;
-    const upcomingName = upcomingId ? getPlayerName(players, upcomingId) : null;
+    const isActive =
+      !eliminated && activePlayerId !== null && team.playerIds.includes(activePlayerId);
+    const upcomingName = isActive && activePlayerId ? getPlayerName(players, activePlayerId) : null;
     const multiPlayerTeam = team.playerIds.length > 1;
 
     return {
       team,
       total,
-      throwCount,
       eliminated,
       isActive,
       upcomingName,

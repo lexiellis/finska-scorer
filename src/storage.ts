@@ -77,18 +77,17 @@ function migrateThrowOrder(game: Game): string[] | undefined {
 
 function migrateGame(raw: Game, players: Player[]): Game {
   const storedMode = (raw as { mode?: string }).mode;
-  const endedAt =
-    storedMode === 'practice' && !raw.endedAt
-      ? new Date().toISOString()
-      : raw.endedAt;
-  // Legacy CSV imports were stored as mode "stats" (practice); treat as real games
-  // so their throws appear in all-time stats / win-rate tracking.
+  // Keep practice sessions playable across reloads. Legacy "stats" mode stays
+  // as stats (treated as practice for scoring UI) except the bundled CSV import.
   const mode =
     raw.id === CSV_IMPORT_GAME_ID
       ? 'game'
-      : storedMode === 'stats'
-        ? 'stats'
-        : 'game';
+      : storedMode === 'practice' || storedMode === 'stats'
+        ? storedMode
+        : storedMode === 'game'
+          ? 'game'
+          : 'game';
+  const endedAt = raw.endedAt;
 
   if (raw.teams?.length) {
     const migrated: Game = {

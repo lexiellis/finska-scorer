@@ -79,8 +79,9 @@ function remapPlayerOrder(
 
 function remapGame(game: Game, remap: Map<string, string>): Game {
   const teams = remapTeams(game.teams, remap);
+  // Keep alternating duplicates in throw order — collapsing with Set breaks rotation.
   const throwOrder = game.throwOrder
-    ? [...new Set(game.throwOrder.map((id) => resolveId(id, remap)))]
+    ? game.throwOrder.map((id) => resolveId(id, remap))
     : undefined;
 
   return {

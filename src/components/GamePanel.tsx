@@ -9,7 +9,6 @@ import { scoreEventMessage } from '../scoring';
 import { getActiveGame } from '../stats';
 import {
   CONSECUTIVE_MISS_LIMIT,
-  getActivePlayerIds,
   getActiveTeams,
   getFirstThrowPlayer,
   getGameShots,
@@ -108,22 +107,17 @@ export function GamePanel({
     }
 
     const gameShots = getGameShots(activeGame, data.shots);
-    const activeIds = getActivePlayerIds(activeGame);
+    const nextId =
+      gameShots.length === 0
+        ? getFirstThrowPlayer(activeGame)
+        : getNextThrowPlayer(
+            activeGame,
+            data.shots,
+            gameShots[gameShots.length - 1]?.playerId ?? null,
+          );
 
-    if (gameShots.length === 0) {
-      setActivePlayerId(getFirstThrowPlayer(activeGame));
-      return;
-    }
-
-    if (!activePlayerId || !activeIds.includes(activePlayerId)) {
-      const lastShot = gameShots[gameShots.length - 1];
-      setActivePlayerId(
-        lastShot
-          ? getNextThrowPlayer(activeGame, data.shots, lastShot.playerId)
-          : getFirstThrowPlayer(activeGame),
-      );
-    }
-  }, [activeGame, activePlayerId, completedGameId, data.shots]);
+    setActivePlayerId((prev) => (prev === nextId ? prev : nextId));
+  }, [activeGame, completedGameId, data.shots]);
 
   const openOrderSetupForNewMatch = (teams: Team[], mode: 'game' | 'practice' = 'game') => {
     const teamOrder = defaultTeamOrder(teams);
@@ -225,7 +219,7 @@ export function GamePanel({
     const team = activeGame.teams.find((t) => t.playerIds.includes(activePlayerId));
     const teamLabel = team ? teamDisplayName(team, data.players) : 'Team';
 
-    const { event, newScore, missStreak, nextPlayerId } = onLogShot({
+    const { event, newScore, missStreak } = onLogShot({
       gameId: activeGame.id,
       playerId: activePlayerId,
       shotType: resolvedShotType,
@@ -254,9 +248,8 @@ export function GamePanel({
 
     if (event === 'win' || event === 'miss_loss') {
       setCompletedGameId(activeGame.id);
-    } else if (nextPlayerId) {
-      setActivePlayerId(nextPlayerId);
     }
+    // Active thrower is derived from shots in useEffect — no manual advance needed.
   };
 
   const handleUndo = () => {

@@ -125,36 +125,37 @@ export function getFirstThrowPlayer(game: Game): string | null {
 export function getNextThrowPlayer(
   game: Game,
   shots: Shot[],
-  lastPlayerId: string | null,
+  _lastPlayerId: string | null,
 ): string | null {
-  if (game.throwOrder?.length) {
-    const order = getActiveThrowOrder(game);
-    if (order.length === 0) return null;
-    const gameShots = getGameShots(game, shots);
-    if (gameShots.length === 0 && !lastPlayerId) return order[0] ?? null;
-    const nextIdx = gameShots.length % order.length;
-    return order[nextIdx] ?? null;
-  }
-
   const activeTeams = getActiveTeams(game);
   if (activeTeams.length === 0) return null;
 
-  if (!lastPlayerId) {
-    return getFirstThrowPlayer(game);
+  // Prefer the team sequence implied by throwOrder (first appearance of each team).
+  let orderedTeams = activeTeams;
+  if (game.throwOrder?.length) {
+    const seen = new Set<string>();
+    const fromOrder: Team[] = [];
+    for (const playerId of game.throwOrder) {
+      const team = activeTeams.find((t) => t.playerIds.includes(playerId));
+      if (!team || seen.has(team.id)) continue;
+      seen.add(team.id);
+      fromOrder.push(team);
+    }
+    for (const team of activeTeams) {
+      if (!seen.has(team.id)) fromOrder.push(team);
+    }
+    if (fromOrder.length > 0) orderedTeams = fromOrder;
   }
 
   const gameShots = getGameShots(game, shots);
-  const lastTeam = getTeamForPlayer(game, lastPlayerId);
-  const lastTeamIndex = lastTeam
-    ? activeTeams.findIndex((t) => t.id === lastTeam.id)
-    : -1;
-  const nextTeamIndex =
-    lastTeamIndex >= 0 ? (lastTeamIndex + 1) % activeTeams.length : 0;
-  const nextTeam = activeTeams[nextTeamIndex]!;
+  const nextTeam = orderedTeams[gameShots.length % orderedTeams.length];
+  if (!nextTeam || nextTeam.playerIds.length === 0) return null;
 
   const teamShotCount = gameShots.filter((s) => s.teamId === nextTeam.id).length;
-  const playerIndex = teamShotCount % nextTeam.playerIds.length;
-  return nextTeam.playerIds[playerIndex] ?? null;
+  const rotation =
+    game.throwOrder?.filter((id) => nextTeam.playerIds.includes(id)) ?? nextTeam.playerIds;
+  const uniqueRotation = [...new Set(rotation.length > 0 ? rotation : nextTeam.playerIds)];
+  return uniqueRotation[teamShotCount % uniqueRotation.length] ?? null;
 }
 
 export function teamDisplayName(team: Team, players: { id: string; name: string }[]): string {
