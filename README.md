@@ -81,4 +81,5 @@ If Supabase env vars are not set, the app still works in local-only mode using b
 - If a throw would take a team **over 50**, that team's score resets to **25**.
 - **3 misses in a row** (log outcome as **Miss**) eliminates the team — streak is shared by everyone on that team.
 - Set up **2+ teams** with one or more players each before a competitive game.
-- **Practice mode** uses the same rules for one player; end practice or start a new round after hitting 50 or 3 misses.
+- **Practice Mode** uses the same to-50 rules with score-only input.
+- **Stat Mode** logs shot type, distance, score, and outcome for each throw.
