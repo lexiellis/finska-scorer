@@ -31,6 +31,59 @@ import {
 import { replaceGameShots } from '../breakShot';
 import type { AppData, Distance, Game, Match, Outcome, Player, Shot, SelectableShotType, Team } from '../types';
 
+/** Discard used to delete locally only — remote rows stayed active and came back on reload. */
+function endGamesForDevice(
+  data: AppData,
+  predicate: (game: Game) => boolean,
+  endedAt = new Date().toISOString(),
+): AppData {
+  const endedIds = new Set(
+    data.games.filter((g) => g.endedAt === null && predicate(g)).map((g) => g.id),
+  );
+  if (endedIds.size === 0) return data;
+
+  const games = data.games.map((g) =>
+    endedIds.has(g.id) ? { ...g, endedAt, winnerTeamId: g.winnerTeamId } : g,
+  );
+  const openMatchIds = new Set(
+    games.filter((g) => g.matchId && g.endedAt === null).map((g) => g.matchId!),
+  );
+
+  return {
+    ...data,
+    games,
+    matches: data.matches.map((m) =>
+      m.endedAt || openMatchIds.has(m.id) ? m : { ...m, endedAt },
+    ),
+  };
+}
+
+/** Keep at most one live session per device; close empty leftovers. */
+function pruneActiveSessionsOnLoad(data: AppData, deviceId: string): AppData {
+  const mine = data.games
+    .filter(
+      (g) =>
+        g.endedAt === null && (g.scribeDeviceId === deviceId || !g.scribeDeviceId),
+    )
+    .sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+
+  if (mine.length === 0) return data;
+
+  const shotCount = (gameId: string) => data.shots.filter((s) => s.gameId === gameId).length;
+  const keep = mine.find((g) => shotCount(g.id) > 0) ?? null;
+  const closeIds = new Set(
+    mine.filter((g) => (keep ? g.id !== keep.id : true)).map((g) => g.id),
+  );
+
+  // Also close a kept session if it has no throws (nothing to resume).
+  if (keep && shotCount(keep.id) === 0) {
+    closeIds.add(keep.id);
+  }
+
+  if (closeIds.size === 0) return data;
+  return endGamesForDevice(data, (g) => closeIds.has(g.id));
+}
+
 function recalculateShotScores(game: Game, shots: Shot[]): Shot[] {
   const ordered = [...shots].sort((a, b) => a.recordedAt.localeCompare(b.recordedAt));
   const scores = Object.fromEntries(game.teams.map((t) => [t.id, 0]));
@@ -96,7 +149,8 @@ export function useAppData() {
       }
 
       setSyncStatus({ ...nextSync, deviceId: nextSync.deviceId });
-      setData(dedupeLocalAppData(imported.data));
+      const deviceId = getDeviceId();
+      setData(pruneActiveSessionsOnLoad(dedupeLocalAppData(imported.data), deviceId));
       setIsHydrated(true);
     }
 
@@ -185,7 +239,14 @@ export function useAppData() {
       };
 
       update((prev) => {
-        let matches = prev.matches;
+        // Close any leftover live session on this device before starting another.
+        const deviceId = getDeviceId();
+        const cleared = endGamesForDevice(
+          prev,
+          (g) => g.scribeDeviceId === deviceId || !g.scribeDeviceId,
+        );
+
+        let matches = cleared.matches;
         let resolvedMatchId = matchId;
 
         if (!resolvedMatchId) {
@@ -214,9 +275,9 @@ export function useAppData() {
         }
 
         return {
-          ...prev,
+          ...cleared,
           matches,
-          games: [...prev.games, { ...game, matchId: resolvedMatchId }],
+          games: [...cleared.games, { ...game, matchId: resolvedMatchId }],
         };
       });
 
@@ -295,21 +356,7 @@ export function useAppData() {
   }, [update]);
 
   const abandonGame = useCallback((gameId: string) => {
-    update((prev) => {
-      const game = prev.games.find((g) => g.id === gameId);
-      const matchId = game?.matchId;
-      return {
-        ...prev,
-        games: prev.games.filter((g) => g.id !== gameId),
-        shots: prev.shots.filter((s) => s.gameId !== gameId),
-        matches:
-          matchId && !prev.games.some((g) => g.matchId === matchId && g.id !== gameId)
-            ? prev.matches.map((m) =>
-                m.id === matchId ? { ...m, endedAt: new Date().toISOString() } : m,
-              )
-            : prev.matches,
-      };
-    });
+    update((prev) => endGamesForDevice(prev, (g) => g.id === gameId));
   }, [update]);
 
   const logShot = useCallback(
