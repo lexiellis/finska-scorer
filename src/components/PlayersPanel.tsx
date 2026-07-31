@@ -77,57 +77,6 @@ export function PlayersPanel({
         <h2>Players</h2>
       </header>
 
-      <div className={`storage-status ${syncStatusClass(syncStatus)}`} role="status">
-        <strong>Data storage</strong>
-        <p>{syncStatusMessage(syncStatus, players.length, trackedShots.length)}</p>
-      </div>
-
-      <form
-        className="add-row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleAdd();
-        }}
-      >
-        <input
-          type="text"
-          name="playerName"
-          placeholder="Player name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="text-input"
-          autoComplete="off"
-          enterKeyHint="done"
-        />
-        <button type="submit" className="btn primary add-btn">
-          Add
-        </button>
-      </form>
-
-      {players.length === 0 ? (
-        <p className="empty-state">No players yet. Add at least two to start a game.</p>
-      ) : (
-        <ul className="player-list">
-          {players.map((p) => (
-            <li key={p.id} className="player-row">
-              <span className="player-name">
-                {p.name}
-                <span className="player-throws">
-                  {getPlayerThrowCount(data, p.id)} throws
-                </span>
-              </span>
-              <button
-                type="button"
-                className="btn ghost danger"
-                onClick={() => onRemove(p.id)}
-              >
-                Remove
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-
       <section className="import-section">
         <h3 className="field-label">Import spreadsheet log</h3>
         <p className="import-hint">
@@ -169,6 +118,11 @@ export function PlayersPanel({
         </button>
         {importMessage && <p className="import-status">{importMessage}</p>}
       </section>
+
+      <div className={`storage-status ${syncStatusClass(syncStatus)}`} role="status">
+        <strong>Data storage</strong>
+        <p>{syncStatusMessage(syncStatus, players.length, trackedShots.length)}</p>
+      </div>
     </div>
   );
 }
