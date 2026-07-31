@@ -73,7 +73,7 @@ If Supabase env vars are not set, the app still works in local-only mode using b
 | Shot type | Standard, Inertia, Retro, Elephant, Kick, Puikula, Bunch, Tuck, Crowd (Break is auto-tagged on the game's first scoring throw) |
 | Distance | 4–8 m, 9m+ |
 | Score | 0–12 (tap a circle) |
-| Outcome | Intended, So-so, Unintended, Miss, Wrong pin, Collateral |
+| Outcome | Intended, So-so, Unintended |
 
 ## Scoring rules
 

@@ -32,6 +32,11 @@ export const OUTCOMES = [
 
 export type Outcome = (typeof OUTCOMES)[number];
 
+/** Outcomes available when logging a new throw (legacy values kept in OUTCOMES for old data). */
+export const SELECTABLE_OUTCOMES = ['Intended', 'So-so', 'Unintended'] as const;
+
+export type SelectableOutcome = (typeof SELECTABLE_OUTCOMES)[number];
+
 export type Tab = 'game' | 'stats' | 'players';
 
 /** `stats` is a legacy stored value now called `practice`. */

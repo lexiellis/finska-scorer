@@ -188,9 +188,6 @@ export function GamePanel({
 
   const handleOutcome = (value: Outcome) => {
     setOutcome(value);
-    if (value === 'Miss' || value === 'Wrong Pin') {
-      setScore(0);
-    }
   };
 
   const resetShotForm = () => {

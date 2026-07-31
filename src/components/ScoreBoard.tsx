@@ -4,7 +4,7 @@ import { getOutcomeIcon, OUTCOME_BUTTON_LABELS } from '../outcomeDisplay';
 import { isHitShot, formatDistanceLabel } from '../stats';
 import { getGameShots, getPlayerName, getTeamsInDisplayOrder, isStatsSession, teamDisplayName } from '../teams';
 import type { AppData, Distance, Game, Outcome, SelectableShotType, Shot } from '../types';
-import { DISTANCES, OUTCOMES, SHOT_TYPES } from '../types';
+import { DISTANCES, SELECTABLE_OUTCOMES, SHOT_TYPES } from '../types';
 
 interface ScoreBoardProps {
   game: Game;
@@ -168,11 +168,15 @@ function ShotEditForm({
           setDraft((prev) => (prev ? { ...prev, outcome: e.target.value as Outcome } : prev))
         }
       >
-        {OUTCOMES.map((v) => (
+        {SELECTABLE_OUTCOMES.map((v) => (
           <option key={v} value={v}>
             {OUTCOME_BUTTON_LABELS[v]}
           </option>
         ))}
+        {/* Keep legacy outcome visible if editing an older throw */}
+        {!SELECTABLE_OUTCOMES.includes(
+          draft.outcome as (typeof SELECTABLE_OUTCOMES)[number],
+        ) && <option value={draft.outcome}>{OUTCOME_BUTTON_LABELS[draft.outcome]}</option>}
       </select>
       <div className="history-actions">
         <button type="button" className="history-btn" onClick={onSave}>

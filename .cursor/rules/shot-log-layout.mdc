@@ -14,7 +14,7 @@ The log form fills one screen on phone/tablet. **Do not assign arbitrary `fr` ro
 2. **Shot type** — 10 buttons, 5 cols → 2 rows → weight matches outcome (2 rows).
 3. **Distance** — 6 buttons, 3 cols × 2 rows → weight matches type/outcome (2 rows).
 4. **Score** — 13-button custom grid (3 rows) → largest weight.
-5. **Outcome** — 6 buttons, 3 cols → 2 rows → medium weight.
+5. **Outcome** — 3 buttons (Intended, So-so, Unintended), 3 cols × 1 row → lightest weight.
 6. Inside each section, set explicit `grid-template-rows: repeat(N, minmax(0, 1fr))` and `align-content: stretch` so buttons fill their slice without dead space.
 7. **Short viewports** (`max-height: 560px`) — switch to fixed `auto` row heights and allow scroll; do not crush controls.
 

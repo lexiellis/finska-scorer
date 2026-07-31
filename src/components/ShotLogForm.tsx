@@ -1,8 +1,9 @@
 import { useRef, useState } from 'react';
 import type { AppData, Distance, Game, Outcome, SelectableShotType, Shot } from '../types';
-import { DISTANCES, OUTCOMES, SHOT_TYPES } from '../types';
+import { DISTANCES, SELECTABLE_OUTCOMES, SHOT_TYPES } from '../types';
 import { formatDistanceLabel } from '../stats';
 import { OUTCOME_BUTTON_LABELS } from '../outcomeDisplay';
+import { isScoringShot } from '../breakShot';
 import { ScoreBoard } from './ScoreBoard';
 
 interface ShotLogFormProps {
@@ -54,6 +55,7 @@ export function ShotLogForm({
   const [showHistory, setShowHistory] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
   const [scoreTravel, setScoreTravel] = useState(120);
+  const isBreakPending = !shots.some((s) => isScoringShot(s));
 
   const openHistory = () => {
     const header = headerRef.current;
@@ -69,6 +71,14 @@ export function ShotLogForm({
 
   const canLog =
     shotType !== null && distance !== null && score !== null && outcome !== null;
+
+  const handleScore = (value: number) => {
+    onScore(value);
+    // Opening break: 10+ pins counts as an automatic success (Intended).
+    if (isBreakPending && value >= 10) {
+      onOutcome('Intended');
+    }
+  };
 
   const handleMainAction = () => {
     if (canLog) {
@@ -162,7 +172,7 @@ export function ShotLogForm({
                 key={i}
                 type="button"
                 className={`score-btn ${score === i ? 'selected' : ''}`}
-                onClick={() => onScore(i)}
+                onClick={() => handleScore(i)}
                 aria-label={`Score ${i}`}
               >
                 {i}
@@ -174,7 +184,7 @@ export function ShotLogForm({
         <section className="log-section log-section--outcome">
           <h3 className="log-section-title">Outcome</h3>
           <div className="btn-grid cols-3 btn-grid--outcomes">
-            {OUTCOMES.map((o) => (
+            {SELECTABLE_OUTCOMES.map((o) => (
               <button
                 key={o}
                 type="button"
