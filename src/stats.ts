@@ -355,7 +355,7 @@ export function formatSessionDate(iso: string | null): string {
 
 export function computeSessionStats(data: AppData, gameId: string): PlayerStats | null {
   const game = data.games.find((g) => g.id === gameId);
-  if (!game) return null;
+  if (!game || isPracticeSession(game)) return null;
   const shots = getGameShots(data, gameId);
   if (shots.length === 0) return null;
   const player: Player = {
@@ -371,6 +371,8 @@ export function computeSessionPlayerStats(
   gameId: string,
   playerId: string,
 ): PlayerStats | null {
+  const game = data.games.find((g) => g.id === gameId);
+  if (!game || isPracticeSession(game)) return null;
   const player = data.players.find((p) => p.id === playerId);
   if (!player) return null;
   const shots = getGameShots(data, gameId).filter((s) => s.playerId === playerId);

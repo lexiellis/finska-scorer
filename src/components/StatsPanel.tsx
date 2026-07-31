@@ -19,7 +19,7 @@ import {
   getTrackedShots,
   getPlayerThrowCount,
 } from '../stats';
-import { getGamePlayerIds } from '../teams';
+import { getGamePlayerIds, isPracticeSession } from '../teams';
 import type { HeatmapCell } from '../stats';
 import type { AppData, ShotType } from '../types';
 import { OUTCOMES, ALL_SHOT_TYPES } from '../types';
@@ -194,6 +194,8 @@ function toRateRow(point: {
 
 export function StatsPanel({ data }: StatsPanelProps) {
   const activeGame = getActiveGame(data);
+  // Practice Mode is score-only — never offer session stats for it.
+  const statsSession = activeGame && !isPracticeSession(activeGame) ? activeGame : null;
   // Always default to all-time so an empty/in-progress session doesn't hide history.
   const [scope, setScope] = useState<'all-time' | 'session'>('all-time');
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
@@ -206,28 +208,28 @@ export function StatsPanel({ data }: StatsPanelProps) {
     }
   }, [data.players, selectedPlayerId]);
 
-  const activeSessionShots = activeGame ? getGameShots(data, activeGame.id) : [];
+  const activeSessionShots = statsSession ? getGameShots(data, statsSession.id) : [];
   const trackedShots = useMemo(() => getTrackedShots(data), [data]);
 
   useEffect(() => {
-    if (!activeGame && scope === 'session') {
+    if (!statsSession && scope === 'session') {
       setScope('all-time');
       setSelectedPlayerId(null);
     }
-  }, [activeGame, scope]);
+  }, [statsSession, scope]);
 
   const stats = useMemo(() => {
     if (data.players.length === 0) return null;
-    if (scope === 'session' && activeGame) {
+    if (scope === 'session' && statsSession) {
       if (selectedPlayerId !== null) {
-        return computeSessionPlayerStats(data, activeGame.id, selectedPlayerId);
+        return computeSessionPlayerStats(data, statsSession.id, selectedPlayerId);
       }
-      return computeSessionStats(data, activeGame.id);
+      return computeSessionStats(data, statsSession.id);
     }
     return selectedPlayerId === null
       ? computeAllPlayersStats(data)
       : computePlayerStats(data, selectedPlayerId);
-  }, [activeGame, data, scope, selectedPlayerId]);
+  }, [statsSession, data, scope, selectedPlayerId]);
 
   const shotTypeFilters = stats?.distanceRatesByShotType ?? [];
 
@@ -267,11 +269,11 @@ export function StatsPanel({ data }: StatsPanelProps) {
       })).filter((d) => d.count > 0)
     : [];
 
-  const sessionPlayerIds = activeGame
-    ? Array.from(new Set(getGamePlayerIds(activeGame)))
+  const sessionPlayerIds = statsSession
+    ? Array.from(new Set(getGamePlayerIds(statsSession)))
     : [];
   const playerOptions =
-    scope === 'session' && activeGame
+    scope === 'session' && statsSession
       ? sessionPlayerIds
           .map((pid) => data.players.find((p) => p.id === pid))
           .filter(Boolean)
@@ -283,7 +285,7 @@ export function StatsPanel({ data }: StatsPanelProps) {
         <h2>Stats</h2>
       </header>
 
-      {activeGame && (
+      {statsSession && (
         <div className="scope-chips" role="group" aria-label="Stats scope">
           <button
             type="button"
@@ -318,13 +320,13 @@ export function StatsPanel({ data }: StatsPanelProps) {
         >
           All
           <span className="chip-score">
-            {scope === 'session' && activeGame ? activeSessionShots.length : trackedShots.length}
+            {scope === 'session' && statsSession ? activeSessionShots.length : trackedShots.length}
           </span>
         </button>
         {playerOptions.map((p) => {
           if (!p) return null;
           const throwCount =
-            scope === 'session' && activeGame
+            scope === 'session' && statsSession
               ? activeSessionShots.filter((s) => s.playerId === p.id).length
               : getPlayerThrowCount(data, p.id);
           return (
