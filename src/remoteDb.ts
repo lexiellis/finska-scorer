@@ -308,16 +308,62 @@ async function batchUpsert(
 async function fetchAllRows<T>(
   supabase: SupabaseClient,
   table: string,
+  options: {
+    orderColumn?: string;
+    excludeEquals?: { column: string; value: string };
+  } = {},
 ): Promise<{ data: T[] | null; error: string | null }> {
+  const orderColumn = options.orderColumn ?? 'id';
+  const exclude = options.excludeEquals;
   const rows: T[] = [];
-  for (let from = 0; ; from += FETCH_PAGE_SIZE) {
+  let expectedTotal: number | null = null;
+  let from = 0;
+
+  while (true) {
     const to = from + FETCH_PAGE_SIZE - 1;
-    const { data, error } = await supabase.from(table).select('*').range(from, to);
+
+    const pageQuery = exclude
+      ? supabase
+          .from(table)
+          .select('*', { count: 'exact' })
+          .neq(exclude.column, exclude.value)
+          .order(orderColumn, { ascending: true })
+          .range(from, to)
+      : supabase
+          .from(table)
+          .select('*', { count: 'exact' })
+          .order(orderColumn, { ascending: true })
+          .range(from, to);
+
+    const { data, error, count } = await pageQuery;
     if (error) return { data: null, error: error.message };
+
+    if (expectedTotal === null && typeof count === 'number') {
+      expectedTotal = count;
+    }
+
     const page = (data as T[] | null) ?? [];
     rows.push(...page);
+
     if (page.length < FETCH_PAGE_SIZE) break;
+    from += FETCH_PAGE_SIZE;
+
+    // Safety valve: never spin forever if the API keeps returning full pages.
+    if (rows.length > 200_000) {
+      return {
+        data: null,
+        error: `Aborted loading ${table} after ${rows.length} rows`,
+      };
+    }
   }
+
+  if (expectedTotal !== null && rows.length !== expectedTotal) {
+    return {
+      data: null,
+      error: `Loaded ${rows.length} of ${expectedTotal} ${table} rows — retry or check Supabase pagination`,
+    };
+  }
+
   return { data: rows, error: null };
 }
 
@@ -393,8 +439,12 @@ export async function fetchRelationalAppData(
   const [playersRes, matchesRes, gamesRes, shotsRes] = await Promise.all([
     fetchAllRows<PlayerRow>(supabase, 'finska_players'),
     fetchAllRows<MatchRow>(supabase, 'finska_matches'),
-    fetchAllRows<GameRow>(supabase, 'finska_games'),
-    fetchAllRows<ShotRow>(supabase, 'finska_shots'),
+    fetchAllRows<GameRow>(supabase, 'finska_games', {
+      excludeEquals: { column: 'id', value: CSV_IMPORT_DUPES_GAME_ID },
+    }),
+    fetchAllRows<ShotRow>(supabase, 'finska_shots', {
+      excludeEquals: { column: 'game_id', value: CSV_IMPORT_DUPES_GAME_ID },
+    }),
   ]);
 
   const firstError =
