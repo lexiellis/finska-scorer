@@ -21,8 +21,6 @@ export default function App() {
     removePlayer,
     startMatchGame,
     endMatch,
-    startStatsSession,
-    endStatsSession,
     endGame,
     abandonGame,
     logShot,
@@ -66,9 +64,7 @@ export default function App() {
           <GamePanel
             data={data}
             onStartMatchGame={startMatchGame}
-            onStartStatsSession={startStatsSession}
             onEndGame={endGame}
-            onEndStatsSession={endStatsSession}
             onEndMatch={endMatch}
             onAbandonGame={abandonGame}
             onLogShot={logShot}

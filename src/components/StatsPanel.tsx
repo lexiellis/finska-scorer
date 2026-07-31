@@ -14,7 +14,6 @@ import {
   computePlayerStats,
   computeSessionPlayerStats,
   computeSessionStats,
-  formatSessionLabel,
   getActiveGame,
   getGameShots,
   getTrackedShots,
@@ -196,7 +195,7 @@ function toRateRow(point: {
 export function StatsPanel({ data }: StatsPanelProps) {
   const activeGame = getActiveGame(data);
   // Always default to all-time so an empty/in-progress session doesn't hide history.
-  const [scope, setScope] = useState<'all-time' | 'practice'>('all-time');
+  const [scope, setScope] = useState<'all-time' | 'session'>('all-time');
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [selectedShotType, setSelectedShotType] = useState<ShotType | 'ALL'>('ALL');
   const [rateView, setRateView] = useState<RateView>('success');
@@ -209,13 +208,9 @@ export function StatsPanel({ data }: StatsPanelProps) {
 
   const activeSessionShots = activeGame ? getGameShots(data, activeGame.id) : [];
   const trackedShots = useMemo(() => getTrackedShots(data), [data]);
-  const sessionStats = useMemo(
-    () => (activeGame ? computeSessionStats(data, activeGame.id) : null),
-    [activeGame, data],
-  );
 
   useEffect(() => {
-    if (!activeGame && scope === 'practice') {
+    if (!activeGame && scope === 'session') {
       setScope('all-time');
       setSelectedPlayerId(null);
     }
@@ -223,7 +218,7 @@ export function StatsPanel({ data }: StatsPanelProps) {
 
   const stats = useMemo(() => {
     if (data.players.length === 0) return null;
-    if (scope === 'practice' && activeGame) {
+    if (scope === 'session' && activeGame) {
       if (selectedPlayerId !== null) {
         return computeSessionPlayerStats(data, activeGame.id, selectedPlayerId);
       }
@@ -272,79 +267,50 @@ export function StatsPanel({ data }: StatsPanelProps) {
       })).filter((d) => d.count > 0)
     : [];
 
+  const sessionPlayerIds = activeGame
+    ? Array.from(new Set(getGamePlayerIds(activeGame)))
+    : [];
+  const playerOptions =
+    scope === 'session' && activeGame
+      ? sessionPlayerIds
+          .map((pid) => data.players.find((p) => p.id === pid))
+          .filter(Boolean)
+      : data.players;
+
   return (
     <div className="panel stats-panel">
       <header className="panel-header">
         <h2>Stats</h2>
       </header>
 
-      {activeGame && sessionStats && sessionStats.totalShots > 0 && (
-        <section className="chart-card chart-card--session">
-          <h3>Current practice</h3>
-          <p className="session-stats-subtitle">
-            {formatSessionLabel(activeGame, data.players)}
-            {' · '}
-            {activeSessionShots.length} throws logged
-          </p>
-          <div className="stat-cards stat-cards--primary">
-            <div className="stat-card">
-              <span className="stat-value">{sessionStats.totalShots}</span>
-              <span className="stat-label">Throws</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-value">{Math.round(sessionStats.successRate)}%</span>
-              <span className="stat-label">Success</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-value">{Math.round(sessionStats.sosoPlusRate)}%</span>
-              <span className="stat-label">Soso+</span>
-            </div>
-          </div>
-          <div className="player-chips session-player-chips">
-            {getGamePlayerIds(activeGame).map((pid) => {
-              const p = data.players.find((pl) => pl.id === pid);
-              if (!p) return null;
-              const ps = computeSessionPlayerStats(data, activeGame.id, pid);
-              if (!ps || ps.totalShots === 0) return null;
-              return (
-                <span key={pid} className="chip session-chip-readonly">
-                  {p.name}
-                  <span className="chip-score">{ps.totalShots}</span>
-                  <span className="chip-rate">{Math.round(ps.successRate)}%</span>
-                </span>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      <p className="stats-scope-label">{scope === 'practice' ? 'Current practice' : 'All-time'}</p>
-
-      <div className="player-chips">
-        {activeGame && (
+      {activeGame && (
+        <div className="scope-chips" role="group" aria-label="Stats scope">
           <button
             type="button"
-            className={`chip ${scope === 'practice' ? 'selected' : ''}`}
+            className={`scope-chip ${scope === 'all-time' ? 'selected' : ''}`}
             onClick={() => {
-              setScope('practice');
+              setScope('all-time');
               setSelectedPlayerId(null);
             }}
           >
-            Practice
+            All-time
+            <span className="chip-score">{trackedShots.length}</span>
+          </button>
+          <button
+            type="button"
+            className={`scope-chip ${scope === 'session' ? 'selected' : ''}`}
+            onClick={() => {
+              setScope('session');
+              setSelectedPlayerId(null);
+            }}
+          >
+            Session
             <span className="chip-score">{activeSessionShots.length}</span>
           </button>
-        )}
-        <button
-          type="button"
-          className={`chip ${scope === 'all-time' ? 'selected' : ''}`}
-          onClick={() => {
-            setScope('all-time');
-            setSelectedPlayerId(null);
-          }}
-        >
-          All-time
-          <span className="chip-score">{trackedShots.length}</span>
-        </button>
+        </div>
+      )}
+
+      <div className="player-chips">
         <button
           type="button"
           className={`chip ${selectedPlayerId === null ? 'selected' : ''}`}
@@ -352,18 +318,13 @@ export function StatsPanel({ data }: StatsPanelProps) {
         >
           All
           <span className="chip-score">
-            {scope === 'practice' && activeGame ? activeSessionShots.length : trackedShots.length}
+            {scope === 'session' && activeGame ? activeSessionShots.length : trackedShots.length}
           </span>
         </button>
-        {(scope === 'practice' && activeGame
-          ? Array.from(new Set(getGamePlayerIds(activeGame)))
-              .map((pid) => data.players.find((p) => p.id === pid))
-              .filter(Boolean)
-          : data.players
-        ).map((p) => {
+        {playerOptions.map((p) => {
           if (!p) return null;
           const throwCount =
-            scope === 'practice' && activeGame
+            scope === 'session' && activeGame
               ? activeSessionShots.filter((s) => s.playerId === p.id).length
               : getPlayerThrowCount(data, p.id);
           return (

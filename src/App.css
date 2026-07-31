@@ -468,6 +468,10 @@
   flex: var(--section-score-weight) 1 0;
 }
 
+.log-section--score-only {
+  flex: 4 1 0;
+}
+
 .log-section--outcome {
   flex: var(--section-outcome-weight) 1 0;
 }
@@ -1050,6 +1054,44 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.scope-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.scope-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: var(--touch);
+  padding: 0 1rem;
+  border-radius: 12px;
+  border: 2px solid color-mix(in srgb, #2f6f7e 35%, var(--border));
+  background: color-mix(in srgb, #2f6f7e 8%, var(--surface-raised, var(--bg)));
+  color: #1f4f5a;
+  font-weight: 700;
+  font-size: 0.95rem;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.scope-chip .chip-score {
+  background: color-mix(in srgb, #2f6f7e 14%, transparent);
+  color: #1f4f5a;
+}
+
+.scope-chip.selected {
+  border-color: #2f6f7e;
+  background: #2f6f7e;
+  color: #fff;
+}
+
+.scope-chip.selected .chip-score {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
 }
 
 .chip {

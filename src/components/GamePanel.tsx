@@ -20,7 +20,6 @@ import {
 import type { AppData, Distance, Game, Outcome, SelectableShotType, Team } from '../types';
 import { MatchSummary } from './MatchSummary';
 import { OrderSetup } from './OrderSetup';
-import { SessionHistory } from './SessionHistory';
 import { SessionSetup } from './SessionSetup';
 import { ShotLogForm } from './ShotLogForm';
 
@@ -40,6 +39,7 @@ interface OrderSetupState {
   matchId: string | null;
   startingTeamId: string;
   startingTeamHint?: string;
+  mode: 'game' | 'practice';
 }
 
 interface GamePanelProps {
@@ -51,10 +51,9 @@ interface GamePanelProps {
     startingTeamId: string;
     matchId?: string;
     gameNumber: number;
+    mode?: 'game' | 'practice';
   }) => Game | null;
-  onStartStatsSession: (playerIds: string[]) => void;
   onEndGame: (gameId: string, winnerTeamId: string) => void;
-  onEndStatsSession: (gameId: string) => void;
   onEndMatch: (matchId: string) => void;
   onAbandonGame: (gameId: string) => void;
   onLogShot: (params: {
@@ -75,9 +74,7 @@ interface GamePanelProps {
 export function GamePanel({
   data,
   onStartMatchGame,
-  onStartStatsSession,
   onEndGame,
-  onEndStatsSession,
   onEndMatch,
   onAbandonGame,
   onLogShot,
@@ -94,7 +91,6 @@ export function GamePanel({
   const [flashKind, setFlashKind] = useState<'info' | 'bust' | 'win' | 'danger'>('info');
   const [completedGameId, setCompletedGameId] = useState<string | null>(null);
   const [showEndMenu, setShowEndMenu] = useState(false);
-  const [viewingSessionHistory, setViewingSessionHistory] = useState(false);
   const [orderSetup, setOrderSetup] = useState<OrderSetupState | null>(null);
 
   const completedGame = completedGameId
@@ -129,7 +125,7 @@ export function GamePanel({
     }
   }, [activeGame, activePlayerId, completedGameId, data.shots]);
 
-  const openOrderSetupForNewMatch = (teams: Team[]) => {
+  const openOrderSetupForNewMatch = (teams: Team[], mode: 'game' | 'practice' = 'game') => {
     const teamOrder = defaultTeamOrder(teams);
     const playerOrder = defaultPlayerOrder(teams);
     setOrderSetup({
@@ -139,6 +135,7 @@ export function GamePanel({
       gameNumber: 1,
       matchId: null,
       startingTeamId: teamOrder[0]!,
+      mode,
     });
   };
 
@@ -156,6 +153,7 @@ export function GamePanel({
       [3, 5, 7, 9].includes(nextGameNumber)
         ? ` ${starterName} throws first (most small points).`
         : undefined;
+    const previousMode = played[played.length - 1]?.mode === 'practice' ? 'practice' : 'game';
 
     setOrderSetup({
       teams: match.teams,
@@ -165,6 +163,7 @@ export function GamePanel({
       matchId,
       startingTeamId,
       startingTeamHint: hint,
+      mode: previousMode,
     });
     setCompletedGameId(null);
   };
@@ -182,6 +181,7 @@ export function GamePanel({
       startingTeamId,
       matchId: orderSetup.matchId ?? undefined,
       gameNumber: orderSetup.gameNumber,
+      mode: orderSetup.mode,
     });
     setOrderSetup(null);
   };
@@ -207,59 +207,52 @@ export function GamePanel({
   };
 
   const handleLogShot = () => {
-    if (
-      !activeGame ||
-      !activePlayerId ||
-      shotType === null ||
-      distance === null ||
-      score === null ||
-      outcome === null
-    ) {
+    if (!activeGame || !activePlayerId || score === null) {
       showFlash('Complete all fields');
       return;
     }
 
-    const playerName =
-      data.players.find((p) => p.id === activePlayerId)?.name ?? 'Player';
+    const scoreOnly = isStatsSession(activeGame);
+    const resolvedShotType = scoreOnly ? 'Standard' : shotType;
+    const resolvedDistance = scoreOnly ? 4 : distance;
+    const resolvedOutcome = scoreOnly ? (score === 0 ? 'Unintended' : 'Intended') : outcome;
+
+    if (resolvedShotType === null || resolvedDistance === null || resolvedOutcome === null) {
+      showFlash('Complete all fields');
+      return;
+    }
+
     const team = activeGame.teams.find((t) => t.playerIds.includes(activePlayerId));
     const teamLabel = team ? teamDisplayName(team, data.players) : 'Team';
-    const isStats = isStatsSession(activeGame);
 
     const { event, newScore, missStreak, nextPlayerId } = onLogShot({
       gameId: activeGame.id,
       playerId: activePlayerId,
-      shotType,
-      distance,
+      shotType: resolvedShotType,
+      distance: resolvedDistance,
       score,
-      outcome,
+      outcome: resolvedOutcome,
     });
 
-    let message: string;
-    let kind: 'info' | 'bust' | 'win' | 'danger' = 'info';
-
-    if (isStats) {
-      message = score > 0 ? `${playerName} +${score}` : `${playerName} — miss`;
-    } else {
-      message = scoreEventMessage(event, teamLabel, score);
-      if (event === 'normal' && score === 0) {
-        message = `${teamLabel} miss ${missStreak}/${CONSECUTIVE_MISS_LIMIT}`;
-      } else if (event === 'normal' && newScore !== null && score > 0) {
-        message = `${teamLabel} → ${newScore}`;
-      }
-      kind =
-        event === 'win'
-          ? 'win'
-          : event === 'miss_loss'
-            ? 'danger'
-            : event === 'bust'
-              ? 'bust'
-              : 'info';
+    let message = scoreEventMessage(event, teamLabel, score);
+    if (event === 'normal' && score === 0) {
+      message = `${teamLabel} miss ${missStreak}/${CONSECUTIVE_MISS_LIMIT}`;
+    } else if (event === 'normal' && newScore !== null && score > 0) {
+      message = `${teamLabel} → ${newScore}`;
     }
+    const kind =
+      event === 'win'
+        ? 'win'
+        : event === 'miss_loss'
+          ? 'danger'
+          : event === 'bust'
+            ? 'bust'
+            : 'info';
 
     showFlash(message, kind);
     resetShotForm();
 
-    if (!isStats && (event === 'win' || event === 'miss_loss')) {
+    if (event === 'win' || event === 'miss_loss') {
       setCompletedGameId(activeGame.id);
     } else if (nextPlayerId) {
       setActivePlayerId(nextPlayerId);
@@ -309,59 +302,38 @@ export function GamePanel({
     );
   }
 
-  if (completedGame?.endedAt) {
-    if (isStatsSession(completedGame)) {
-      const throwCount = data.shots.filter((s) => s.gameId === completedGame.id).length;
-      return (
-        <div className="panel panel-done">
-          <p className="flash-win">Practice ended — {throwCount} throws logged</p>
-          <button
-            type="button"
-            className="btn primary large"
-            onClick={() => {
-              setCompletedGameId(null);
-              setFlash('');
-            }}
-          >
-            Done
-          </button>
-        </div>
-      );
-    }
+  if (completedGame?.endedAt && completedGame.winnerTeamId) {
+    const winnerTeam = completedGame.teams.find(
+      (t) => t.id === completedGame.winnerTeamId,
+    );
+    const winnerName = winnerTeam
+      ? teamDisplayName(winnerTeam, data.players)
+      : 'Team';
+    const eliminated = completedGame.teams.find((t) =>
+      completedGame.eliminatedTeamIds.includes(t.id),
+    );
+    const byMisses =
+      eliminated && completedGame.winnerTeamId !== eliminated.id;
 
-    if (completedGame.winnerTeamId) {
-      const winnerTeam = completedGame.teams.find(
-        (t) => t.id === completedGame.winnerTeamId,
-      );
-      const winnerName = winnerTeam
-        ? teamDisplayName(winnerTeam, data.players)
-        : 'Team';
-      const eliminated = completedGame.teams.find((t) =>
-        completedGame.eliminatedTeamIds.includes(t.id),
-      );
-      const byMisses =
-        eliminated && completedGame.winnerTeamId !== eliminated.id;
-
-      return (
-        <div className="panel panel-done">
-          <p className="flash-win">
-            {byMisses
-              ? `${teamDisplayName(eliminated, data.players)} out · ${winnerName} wins`
-              : `${winnerName} wins`}
-          </p>
-          <button
-            type="button"
-            className="btn primary large"
-            onClick={() => {
-              setCompletedGameId(null);
-              setFlash('');
-            }}
-          >
-            Done
-          </button>
-        </div>
-      );
-    }
+    return (
+      <div className="panel panel-done">
+        <p className="flash-win">
+          {byMisses
+            ? `${teamDisplayName(eliminated, data.players)} out · ${winnerName} wins`
+            : `${winnerName} wins`}
+        </p>
+        <button
+          type="button"
+          className="btn primary large"
+          onClick={() => {
+            setCompletedGameId(null);
+            setFlash('');
+          }}
+        >
+          Done
+        </button>
+      </div>
+    );
   }
 
   if (!activeGame) {
@@ -370,26 +342,14 @@ export function GamePanel({
         {data.players.length === 0 ? (
           <p className="empty-state">Add players first.</p>
         ) : (
-          <>
-            <SessionHistory
-              data={data}
-              onDetailOpenChange={setViewingSessionHistory}
-              onUpdateShot={onUpdateShot}
-            />
-            {!viewingSessionHistory && (
-              <SessionSetup
-                players={data.players}
-                onTeamsReady={openOrderSetupForNewMatch}
-                onStartStatsSession={onStartStatsSession}
-              />
-            )}
-          </>
+          <SessionSetup players={data.players} onTeamsReady={openOrderSetupForNewMatch} />
         )}
       </div>
     );
   }
 
   const liveShots = data.shots.filter((s) => s.gameId === activeGame.id);
+  const scoreOnly = isStatsSession(activeGame);
 
   return (
     <>
@@ -402,6 +362,7 @@ export function GamePanel({
         distance={distance}
         score={score}
         outcome={outcome}
+        scoreOnly={scoreOnly}
         onShotType={setShotType}
         onDistance={setDistance}
         onScore={setScore}
@@ -424,11 +385,6 @@ export function GamePanel({
             setCompletedGameId(gameId);
             setShowEndMenu(false);
           }}
-          onEndStatsSession={(id) => {
-            onEndStatsSession(id);
-            setCompletedGameId(id);
-            setShowEndMenu(false);
-          }}
           onAbandon={onAbandonGame}
         />
       )}
@@ -441,42 +397,21 @@ function EndMenu({
   players,
   onClose,
   onEndGame,
-  onEndStatsSession,
   onAbandon,
 }: {
   game: Game;
   players: AppData['players'];
   onClose: () => void;
   onEndGame: (gameId: string, winnerTeamId: string) => void;
-  onEndStatsSession: (gameId: string) => void;
   onAbandon: (gameId: string) => void;
 }) {
   const [pickWinner, setPickWinner] = useState(false);
-  const isStats = isStatsSession(game);
+  const isPractice = isStatsSession(game);
 
   return (
     <div className="menu-backdrop" onClick={onClose}>
       <div className="menu-sheet" onClick={(e) => e.stopPropagation()}>
-        {isStats ? (
-          <>
-            <button
-              type="button"
-              className="menu-item"
-              onClick={() => onEndStatsSession(game.id)}
-            >
-              End practice
-            </button>
-            <button
-              type="button"
-              className="menu-item danger"
-              onClick={() => {
-                if (confirm('Discard practice?')) onAbandon(game.id);
-              }}
-            >
-              Discard
-            </button>
-          </>
-        ) : pickWinner ? (
+        {pickWinner ? (
           <>
             <p className="menu-title">Winner</p>
             {getActiveTeams(game).map((team) => (
@@ -496,13 +431,15 @@ function EndMenu({
         ) : (
           <>
             <button type="button" className="menu-item" onClick={() => setPickWinner(true)}>
-              End game
+              {isPractice ? 'End practice' : 'End game'}
             </button>
             <button
               type="button"
               className="menu-item danger"
               onClick={() => {
-                if (confirm('Discard game?')) onAbandon(game.id);
+                if (confirm(isPractice ? 'Discard practice?' : 'Discard game?')) {
+                  onAbandon(game.id);
+                }
               }}
             >
               Discard

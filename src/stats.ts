@@ -331,7 +331,7 @@ export function getEndedSessions(data: AppData): Game[] {
 export function formatSessionLabel(game: Game, players: Player[]): string {
   const teamLabels = game.teams.map((t) => teamDisplayName(t, players));
   if (isStatsSession(game)) {
-    return `Practice · ${teamLabels.join(', ')}`;
+    return `Practice Mode · ${teamLabels.join(', ')}`;
   }
   if (game.winnerTeamId) {
     const winner = game.teams.find((t) => t.id === game.winnerTeamId);

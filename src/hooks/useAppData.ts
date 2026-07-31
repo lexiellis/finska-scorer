@@ -24,7 +24,6 @@ import {
   buildThrowOrder,
   getNextThrowPlayer,
   getTeamForPlayer,
-  isPracticeSession,
   isMissOutcome,
   recomputeGameState,
   rotateTeamsStartingFirst,
@@ -152,8 +151,10 @@ export function useAppData() {
       startingTeamId: string;
       matchId?: string;
       gameNumber: number;
+      mode?: 'game' | 'practice';
     }) => {
       const { teams, teamOrder, playerOrder, startingTeamId, matchId, gameNumber } = params;
+      const mode = params.mode ?? 'game';
       if (teams.length < 2) return null;
 
       const orderedTeams = rotateTeamsStartingFirst(
@@ -170,7 +171,7 @@ export function useAppData() {
 
       const game: Game = {
         id: createId(),
-        mode: 'game',
+        mode,
         teams: orderedTeams,
         throwOrder,
         scores,
@@ -333,8 +334,7 @@ export function useAppData() {
         const team = getTeamForPlayer(game, params.playerId);
         if (!team) return prev;
 
-        const isStats = isPracticeSession(game);
-        const scoreBefore = isStats ? 0 : (game.scores[team.id] ?? 0);
+        const scoreBefore = game.scores[team.id] ?? 0;
         const isMiss = isMissOutcome(params.outcome, params.score);
 
         const shot: Shot = {
@@ -354,14 +354,6 @@ export function useAppData() {
         const gameShots = [...prev.shots.filter((s) => s.gameId === params.gameId), shot];
         const allShots = replaceGameShots(prev.shots, params.gameId, gameShots);
         nextPlayerId = getNextThrowPlayer(game, allShots, params.playerId);
-
-        if (isStats) {
-          resultShot = allShots.find((s) => s.id === shot.id) ?? shot;
-          return {
-            ...prev,
-            shots: allShots,
-          };
-        }
 
         if (!isMiss) {
           const applied = applyFinskaScore(scoreBefore, params.score);
@@ -420,13 +412,6 @@ export function useAppData() {
 
       const remainingShots = prev.shots.filter((s) => s.id !== last.id);
 
-      if (isPracticeSession(game)) {
-        return {
-          ...prev,
-          shots: replaceGameShots(remainingShots, gameId, remainingShots.filter((s) => s.gameId === gameId)),
-        };
-      }
-
       const state = recomputeGameState(
         { ...game, eliminatedTeamIds: [], winnerTeamId: null, endedAt: null },
         remainingShots,
@@ -467,17 +452,6 @@ export function useAppData() {
         const patchedShots = gameShots.map((s) =>
           s.id === shotId ? { ...s, ...patch } : s,
         );
-
-        if (isPracticeSession(game)) {
-          return {
-            ...prev,
-            shots: replaceGameShots(
-              [...untouchedShots, ...patchedShots],
-              game.id,
-              patchedShots,
-            ),
-          };
-        }
 
         const recalculatedShots = recalculateShotScores(game, patchedShots);
         const normalizedShots = replaceGameShots(

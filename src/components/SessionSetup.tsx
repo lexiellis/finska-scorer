@@ -1,30 +1,16 @@
-import { useState } from 'react';
 import { TeamSetup } from './TeamSetup';
+import { useState } from 'react';
 import type { Player, Team } from '../types';
 
 type SessionMode = 'practice' | 'game';
 
 interface SessionSetupProps {
   players: Player[];
-  onTeamsReady: (teams: Team[]) => void;
-  onStartStatsSession: (playerIds: string[]) => void;
+  onTeamsReady: (teams: Team[], mode: SessionMode) => void;
 }
 
-export function SessionSetup({
-  players,
-  onTeamsReady,
-  onStartStatsSession,
-}: SessionSetupProps) {
+export function SessionSetup({ players, onTeamsReady }: SessionSetupProps) {
   const [mode, setMode] = useState<SessionMode>('practice');
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-
-  const addPracticePlayer = (id: string) => {
-    setSelectedIds((prev) => [...prev, id]);
-  };
-
-  const removePracticePlayerAt = (index: number) => {
-    setSelectedIds((prev) => prev.filter((_, i) => i !== index));
-  };
 
   return (
     <section className="session-setup">
@@ -34,65 +20,32 @@ export function SessionSetup({
           className={`mode-btn ${mode === 'practice' ? 'selected' : ''}`}
           onClick={() => setMode('practice')}
         >
-          Practice
+          Practice Mode
         </button>
         <button
           type="button"
           className={`mode-btn ${mode === 'game' ? 'selected' : ''}`}
           onClick={() => setMode('game')}
         >
-          Game to 50
+          Stat Mode
         </button>
       </div>
 
       {mode === 'practice' ? (
         <>
           <p className="session-hint">
-            Pick throwers for practice. Tap players to add them in throw order (duplicates allowed,
-            e.g. Lexi vs Lexi). Practice throws are excluded from saved stats.
+            Practice Mode — same rules as a game to 50 (bust to 25, three misses). Only the pin
+            score is logged each throw.
           </p>
-          <div className="player-chips">
-            {players.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                className="chip"
-                onClick={() => addPracticePlayer(p.id)}
-              >
-                + {p.name}
-              </button>
-            ))}
-          </div>
-          {selectedIds.length > 0 && (
-            <div className="player-chips">
-              {selectedIds.map((id, index) => {
-                const player = players.find((p) => p.id === id);
-                if (!player) return null;
-                return (
-                  <button
-                    key={`${id}-${index}`}
-                    type="button"
-                    className="chip selected"
-                    onClick={() => removePracticePlayerAt(index)}
-                    title="Remove thrower"
-                  >
-                    {player.name}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-          <button
-            type="button"
-            className="btn primary large"
-            disabled={selectedIds.length < 1}
-            onClick={() => onStartStatsSession(selectedIds)}
-          >
-            Start practice
-          </button>
+          <TeamSetup players={players} onTeamsReady={(teams) => onTeamsReady(teams, 'practice')} />
         </>
       ) : (
-        <TeamSetup players={players} onTeamsReady={onTeamsReady} />
+        <>
+          <p className="session-hint">
+            Stat Mode — game to 50 with full throw logging (shot type, distance, score, outcome).
+          </p>
+          <TeamSetup players={players} onTeamsReady={(teams) => onTeamsReady(teams, 'game')} />
+        </>
       )}
     </section>
   );

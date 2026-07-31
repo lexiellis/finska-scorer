@@ -15,6 +15,7 @@ interface ShotLogFormProps {
   distance: Distance | null;
   score: number | null;
   outcome: Outcome | null;
+  scoreOnly?: boolean;
   onShotType: (v: SelectableShotType) => void;
   onDistance: (v: Distance) => void;
   onScore: (v: number) => void;
@@ -41,6 +42,7 @@ export function ShotLogForm({
   distance,
   score,
   outcome,
+  scoreOnly = false,
   onShotType,
   onDistance,
   onScore,
@@ -69,13 +71,14 @@ export function ShotLogForm({
     setShowHistory(true);
   };
 
-  const canLog =
-    shotType !== null && distance !== null && score !== null && outcome !== null;
+  const canLog = scoreOnly
+    ? score !== null
+    : shotType !== null && distance !== null && score !== null && outcome !== null;
 
   const handleScore = (value: number) => {
     onScore(value);
     // Opening break: 10+ pins counts as an automatic success (Intended).
-    if (isBreakPending && value >= 10) {
+    if (!scoreOnly && isBreakPending && value >= 10) {
       onOutcome('Intended');
     }
   };
@@ -132,39 +135,43 @@ export function ShotLogForm({
         </div>
       ) : (
       <div className="log-fields">
-        <section className="log-section log-section--type">
-          <h3 className="log-section-title">Shot type</h3>
-          <div className="btn-grid cols-5">
-            {SHOT_TYPES.map((t) => (
-              <button
-                key={t}
-                type="button"
-                className={`pick-btn pick-btn--compact ${shotType === t ? 'selected' : ''}`}
-                onClick={() => onShotType(t)}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-        </section>
+        {!scoreOnly && (
+          <>
+            <section className="log-section log-section--type">
+              <h3 className="log-section-title">Shot type</h3>
+              <div className="btn-grid cols-5">
+                {SHOT_TYPES.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    className={`pick-btn pick-btn--compact ${shotType === t ? 'selected' : ''}`}
+                    onClick={() => onShotType(t)}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </section>
 
-        <section className="log-section log-section--distance">
-          <h3 className="log-section-title">Distance</h3>
-          <div className="btn-grid btn-grid--distance">
-            {DISTANCES.map((d) => (
-              <button
-                key={String(d)}
-                type="button"
-                className={`pick-btn pick-btn--compact ${distance === d ? 'selected' : ''}`}
-                onClick={() => onDistance(d)}
-              >
-                {formatDistanceLabel(d)}
-              </button>
-            ))}
-          </div>
-        </section>
+            <section className="log-section log-section--distance">
+              <h3 className="log-section-title">Distance</h3>
+              <div className="btn-grid btn-grid--distance">
+                {DISTANCES.map((d) => (
+                  <button
+                    key={String(d)}
+                    type="button"
+                    className={`pick-btn pick-btn--compact ${distance === d ? 'selected' : ''}`}
+                    onClick={() => onDistance(d)}
+                  >
+                    {formatDistanceLabel(d)}
+                  </button>
+                ))}
+              </div>
+            </section>
+          </>
+        )}
 
-        <section className="log-section log-section--score">
+        <section className={`log-section log-section--score ${scoreOnly ? 'log-section--score-only' : ''}`}>
           <h3 className="log-section-title">Score</h3>
           <div className="score-grid">
             {Array.from({ length: 13 }, (_, i) => (
@@ -181,21 +188,23 @@ export function ShotLogForm({
           </div>
         </section>
 
-        <section className="log-section log-section--outcome">
-          <h3 className="log-section-title">Outcome</h3>
-          <div className="btn-grid cols-3 btn-grid--outcomes">
-            {SELECTABLE_OUTCOMES.map((o) => (
-              <button
-                key={o}
-                type="button"
-                className={`pick-btn pick-btn--outcome ${outcome === o ? 'selected' : ''}`}
-                onClick={() => onOutcome(o)}
-              >
-                {OUTCOME_LABELS[o]}
-              </button>
-            ))}
-          </div>
-        </section>
+        {!scoreOnly && (
+          <section className="log-section log-section--outcome">
+            <h3 className="log-section-title">Outcome</h3>
+            <div className="btn-grid cols-3 btn-grid--outcomes">
+              {SELECTABLE_OUTCOMES.map((o) => (
+                <button
+                  key={o}
+                  type="button"
+                  className={`pick-btn pick-btn--outcome ${outcome === o ? 'selected' : ''}`}
+                  onClick={() => onOutcome(o)}
+                >
+                  {OUTCOME_LABELS[o]}
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
       )}
 
