@@ -97,6 +97,25 @@ export function getGameShots(game: Game, shots: Shot[]): Shot[] {
     .sort((a, b) => a.recordedAt.localeCompare(b.recordedAt));
 }
 
+/** Recompute scoreBefore/scoreAfter for a game's shots in chronological order. */
+export function recalculateShotScores(game: Game, shots: Shot[]): Shot[] {
+  const ordered = [...shots].sort((a, b) => a.recordedAt.localeCompare(b.recordedAt));
+  const scores = Object.fromEntries(game.teams.map((t) => [t.id, 0]));
+
+  return ordered.map((shot) => {
+    const scoreBefore = scores[shot.teamId] ?? 0;
+    let scoreAfter = scoreBefore;
+
+    if (!isMissOutcome(shot.outcome, shot.score) && shot.score !== null) {
+      const applied = applyFinskaScore(scoreBefore, shot.score);
+      scoreAfter = applied.newScore;
+    }
+
+    scores[shot.teamId] = scoreAfter;
+    return { ...shot, scoreBefore, scoreAfter };
+  });
+}
+
 export function getFirstThrowPlayer(game: Game): string | null {
   const order = getActiveThrowOrder(game);
   return order[0] ?? null;
@@ -191,17 +210,6 @@ export function recomputeGameState(game: Game, shots: Shot[]): RecomputedGameSta
   const scores = Object.fromEntries(game.teams.map((t) => [t.id, 0]));
   const missStreaks = Object.fromEntries(game.teams.map((t) => [t.id, 0]));
   const eliminated = new Set<string>(game.eliminatedTeamIds);
-
-  if (isStatsSession(game)) {
-    return {
-      scores,
-      missStreaks,
-      eliminatedTeamIds: [],
-      winnerTeamId: null,
-      endReason: null,
-      isEnded: false,
-    };
-  }
 
   let winnerTeamId: string | null = null;
   let endReason: GameEndReason = null;

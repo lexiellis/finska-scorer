@@ -25,6 +25,7 @@ import {
   getNextThrowPlayer,
   getTeamForPlayer,
   isMissOutcome,
+  recalculateShotScores,
   recomputeGameState,
   rotateTeamsStartingFirst,
 } from '../teams';
@@ -82,24 +83,6 @@ function pruneActiveSessionsOnLoad(data: AppData, deviceId: string): AppData {
 
   if (closeIds.size === 0) return data;
   return endGamesForDevice(data, (g) => closeIds.has(g.id));
-}
-
-function recalculateShotScores(game: Game, shots: Shot[]): Shot[] {
-  const ordered = [...shots].sort((a, b) => a.recordedAt.localeCompare(b.recordedAt));
-  const scores = Object.fromEntries(game.teams.map((t) => [t.id, 0]));
-
-  return ordered.map((shot) => {
-    const scoreBefore = scores[shot.teamId] ?? 0;
-    let scoreAfter = scoreBefore;
-
-    if (!isMissOutcome(shot.outcome, shot.score) && shot.score !== null) {
-      const applied = applyFinskaScore(scoreBefore, shot.score);
-      scoreAfter = applied.newScore;
-    }
-
-    scores[shot.teamId] = scoreAfter;
-    return { ...shot, scoreBefore, scoreAfter };
-  });
 }
 
 export function useAppData() {
@@ -398,30 +381,28 @@ export function useAppData() {
           scoreAfter: scoreBefore,
         };
 
-        const gameShots = [...prev.shots.filter((s) => s.gameId === params.gameId), shot];
+        const rawGameShots = [...prev.shots.filter((s) => s.gameId === params.gameId), shot];
+        const gameShots = recalculateShotScores(game, rawGameShots);
         const allShots = replaceGameShots(prev.shots, params.gameId, gameShots);
         nextPlayerId = getNextThrowPlayer(game, allShots, params.playerId);
 
-        if (!isMiss) {
-          const applied = applyFinskaScore(scoreBefore, params.score);
-          shot.scoreAfter = applied.newScore;
-          scoreEvent = applied.event;
-          newScore = applied.newScore;
-        } else {
-          scoreEvent = 'normal';
-          newScore = scoreBefore;
-        }
-
-        resultShot = allShots.find((s) => s.id === shot.id) ?? shot;
+        const recalculated = gameShots.find((s) => s.id === shot.id) ?? shot;
+        resultShot = recalculated;
         const state = recomputeGameState(game, allShots);
 
         if (state.endReason === 'three_misses') {
           scoreEvent = 'miss_loss';
+          newScore = state.scores[team.id] ?? 0;
         } else if (state.endReason === 'win_50') {
           scoreEvent = 'win';
+          newScore = state.scores[team.id] ?? 0;
         } else if (!isMiss) {
-          const applied = applyFinskaScore(scoreBefore, params.score);
-          if (applied.event === 'bust') scoreEvent = 'bust';
+          const applied = applyFinskaScore(recalculated.scoreBefore, params.score);
+          scoreEvent = applied.event;
+          newScore = applied.newScore;
+        } else {
+          scoreEvent = 'normal';
+          newScore = recalculated.scoreAfter;
         }
 
         missStreak = state.missStreaks[team.id] ?? 0;
@@ -457,7 +438,12 @@ export function useAppData() {
       const last = gameShots[0];
       if (!last) return prev;
 
-      const remainingShots = prev.shots.filter((s) => s.id !== last.id);
+      const remainingRaw = prev.shots.filter((s) => s.id !== last.id);
+      const remainingForGame = recalculateShotScores(
+        game,
+        remainingRaw.filter((s) => s.gameId === gameId),
+      );
+      const remainingShots = replaceGameShots(remainingRaw, gameId, remainingForGame);
 
       const state = recomputeGameState(
         { ...game, eliminatedTeamIds: [], winnerTeamId: null, endedAt: null },
@@ -466,7 +452,7 @@ export function useAppData() {
 
       return {
         ...prev,
-        shots: replaceGameShots(remainingShots, gameId, remainingShots.filter((s) => s.gameId === gameId)),
+        shots: remainingShots,
         games: prev.games.map((g) =>
           g.id === gameId
             ? {

@@ -2,7 +2,7 @@ import { useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 import { FINSKA_TARGET } from '../scoring';
 import { getOutcomeIcon, OUTCOME_BUTTON_LABELS } from '../outcomeDisplay';
 import { isHitShot, formatDistanceLabel } from '../stats';
-import { getGameShots, getPlayerName, getTeamsInDisplayOrder, isStatsSession, teamDisplayName } from '../teams';
+import { getGameShots, getPlayerName, getTeamsInDisplayOrder, isStatsSession, recalculateShotScores, recomputeGameState, teamDisplayName } from '../teams';
 import type { AppData, Distance, Game, Outcome, SelectableShotType, Shot } from '../types';
 import { DISTANCES, SELECTABLE_OUTCOMES, SHOT_TYPES } from '../types';
 
@@ -211,8 +211,9 @@ export function ScoreBoard({
 }: ScoreBoardProps) {
   const tapToDismiss = mode === 'expanded' && Boolean(onDismiss);
   const canEditShots = Boolean(onUpdateShot) && !tapToDismiss;
-  const throws = useMemo(() => getGameShots(game, shots), [game, shots]);
+  const throws = useMemo(() => recalculateShotScores(game, getGameShots(game, shots)), [game, shots]);
   const displayTeams = useMemo(() => getTeamsInDisplayOrder(game, shots), [game, shots]);
+  const liveScores = useMemo(() => recomputeGameState(game, throws).scores, [game, throws]);
 
   const [editingShotId, setEditingShotId] = useState<string | null>(null);
   const [draft, setDraft] = useState<{
@@ -231,7 +232,7 @@ export function ScoreBoard({
   const isPractice = isStatsSession(game);
 
   const teamMeta = displayTeams.map((team, teamIndex) => {
-    const total = game.scores[team.id] ?? 0;
+    const total = liveScores[team.id] ?? 0;
     const eliminated = game.eliminatedTeamIds.includes(team.id);
     const teamThrowList = teamShots[teamIndex] ?? [];
     const throwCount = teamThrowList.length;
