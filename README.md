@@ -8,9 +8,8 @@ A touch-friendly web app for logging Finska throws on iPad (or any device). Trac
 - **Teams** — multiple players per team; shared team score and miss streak
 - **Live scores** with official Finska rules (first to **50** exactly; over 50 resets to **25**)
 - **Three-miss rule** — 3 consecutive misses (outcome: Miss) eliminates the team
-- **Practice mode** — solo logging with full rules; shots count in stats but not win rate
-- **Player management** with persistent local storage
-- **Stats & graphs**: win %, score distribution, distance, shot types, outcomes
+- **Practice Mode** — game to 50 with score-only logging (bust / three-miss rules)
+- **Stat Mode** — game to 50 with full throw logging (type, distance, score, outcome)
 
 ## Run locally
 
