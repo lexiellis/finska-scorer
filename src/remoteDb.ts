@@ -6,6 +6,8 @@ const RELATIONAL_MIGRATED_KEY = 'finska-relational-v1';
 const LEGACY_SHARED_STATE_ID = 'global';
 const LEGACY_TABLE = 'app_state';
 const BATCH_SIZE = 400;
+/** Supabase/PostgREST caps a single select at 1000 rows by default. */
+const FETCH_PAGE_SIZE = 1000;
 
 type LegacyStateRow = { id: string; data: AppData };
 
@@ -289,6 +291,22 @@ async function batchUpsert(
   return null;
 }
 
+async function fetchAllRows<T>(
+  supabase: SupabaseClient,
+  table: string,
+): Promise<{ data: T[] | null; error: string | null }> {
+  const rows: T[] = [];
+  for (let from = 0; ; from += FETCH_PAGE_SIZE) {
+    const to = from + FETCH_PAGE_SIZE - 1;
+    const { data, error } = await supabase.from(table).select('*').range(from, to);
+    if (error) return { data: null, error: error.message };
+    const page = (data as T[] | null) ?? [];
+    rows.push(...page);
+    if (page.length < FETCH_PAGE_SIZE) break;
+  }
+  return { data: rows, error: null };
+}
+
 export function isRelationalMigrated(): boolean {
   try {
     return localStorage.getItem(RELATIONAL_MIGRATED_KEY) === '1';
@@ -359,18 +377,14 @@ export async function fetchRelationalAppData(
   deviceId: string,
 ): Promise<{ data: AppData | null; error: string | null }> {
   const [playersRes, matchesRes, gamesRes, shotsRes] = await Promise.all([
-    supabase.from('finska_players').select('*'),
-    supabase.from('finska_matches').select('*'),
-    supabase.from('finska_games').select('*'),
-    supabase.from('finska_shots').select('*'),
+    fetchAllRows<PlayerRow>(supabase, 'finska_players'),
+    fetchAllRows<MatchRow>(supabase, 'finska_matches'),
+    fetchAllRows<GameRow>(supabase, 'finska_games'),
+    fetchAllRows<ShotRow>(supabase, 'finska_shots'),
   ]);
 
   const firstError =
-    playersRes.error?.message ??
-    matchesRes.error?.message ??
-    gamesRes.error?.message ??
-    shotsRes.error?.message ??
-    null;
+    playersRes.error ?? matchesRes.error ?? gamesRes.error ?? shotsRes.error ?? null;
 
   if (firstError) {
     if (firstError.includes('does not exist') || firstError.includes('schema cache')) {
@@ -380,19 +394,18 @@ export async function fetchRelationalAppData(
   }
 
   const games = visibleGamesForDevice(
-    (gamesRes.data as GameRow[] | null)?.map(fromGameRow) ?? [],
+    (gamesRes.data ?? []).map(fromGameRow),
     deviceId,
   );
   const gameIds = new Set(games.map((g) => g.id));
 
   const data: AppData = dedupePlayersByName({
-    players: (playersRes.data as PlayerRow[] | null)?.map(fromPlayerRow) ?? [],
-    matches: (matchesRes.data as MatchRow[] | null)?.map(fromMatchRow) ?? [],
+    players: (playersRes.data ?? []).map(fromPlayerRow),
+    matches: (matchesRes.data ?? []).map(fromMatchRow),
     games,
-    shots:
-      (shotsRes.data as ShotRow[] | null)
-        ?.map(fromShotRow)
-        .filter((s) => gameIds.has(s.gameId)) ?? [],
+    shots: (shotsRes.data ?? [])
+      .map(fromShotRow)
+      .filter((s) => gameIds.has(s.gameId)),
   }).data;
 
   return { data, error: null };
