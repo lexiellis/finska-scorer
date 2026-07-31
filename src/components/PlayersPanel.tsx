@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { AppData } from '../types';
 import type { SyncStatus } from '../storage';
-import { getPlayerThrowCount, getTrackedShots } from '../stats';
+import { getTrackedShots } from '../stats';
 
 interface PlayersPanelProps {
   data: AppData;
@@ -53,23 +53,13 @@ function syncStatusMessage(sync: SyncStatus, playerCount: number, shotCount: num
 export function PlayersPanel({
   data,
   syncStatus,
-  onAdd,
-  onRemove,
   onImportCsv,
   onResetToImportedLog,
 }: PlayersPanelProps) {
   const { players } = data;
   const trackedShots = getTrackedShots(data);
-  const [name, setName] = useState('');
   const [importMessage, setImportMessage] = useState('');
   const [resetting, setResetting] = useState(false);
-
-  const handleAdd = () => {
-    const trimmed = name.trim();
-    if (!trimmed) return;
-    onAdd(trimmed);
-    setName('');
-  };
 
   return (
     <div className="panel">

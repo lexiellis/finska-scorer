@@ -2093,6 +2093,29 @@
   cursor: pointer;
 }
 
+.score-bubble-row--numbers {
+  grid-template-columns: 1fr 1fr;
+  justify-items: center;
+  min-height: 2.75rem;
+}
+
+.score-board-expanded--numbers .score-bubble-row {
+  min-height: 2.75rem;
+}
+
+.score-board-expanded--numbers .score-bubble-row-throw,
+.score-board-expanded--numbers .score-bubble-row-total {
+  width: auto;
+  min-width: 2.5rem;
+  font-size: clamp(1.25rem, 4vw, 1.6rem);
+}
+
+.history-edit-grid--score-only {
+  grid-template-columns: 1fr;
+  max-width: 8rem;
+  margin: 0 auto;
+}
+
 .score-bubble-row:last-child {
   border-bottom: none;
 }
@@ -2114,6 +2137,10 @@
 
 .score-bubble-row--empty span:last-child {
   text-align: left;
+}
+
+.score-bubble-row--empty.score-bubble-row--numbers span:last-child {
+  text-align: center;
 }
 
 .score-bubble-row--editing {
@@ -2158,23 +2185,23 @@
 }
 
 /* Column 1: shot info left, scores right. Column 2: mirror. */
-.score-bubbles--expanded .score-bubble--column:nth-child(odd) .score-bubble-row {
+.score-bubbles--expanded .score-bubble--column:nth-child(odd) .score-bubble-row:not(.score-bubble-row--numbers) {
   grid-template-columns: 1fr auto auto;
 }
 
-.score-bubbles--expanded .score-bubble--column:nth-child(odd) .score-bubble-row-shot {
+.score-bubbles--expanded .score-bubble--column:nth-child(odd) .score-bubble-row:not(.score-bubble-row--numbers) .score-bubble-row-shot {
   order: 1;
 }
 
-.score-bubbles--expanded .score-bubble--column:nth-child(odd) .score-bubble-row-total {
+.score-bubbles--expanded .score-bubble--column:nth-child(odd) .score-bubble-row:not(.score-bubble-row--numbers) .score-bubble-row-total {
   order: 3;
 }
 
-.score-bubbles--expanded .score-bubble--column:nth-child(odd) .score-bubble-row-throw {
+.score-bubbles--expanded .score-bubble--column:nth-child(odd) .score-bubble-row:not(.score-bubble-row--numbers) .score-bubble-row-throw {
   order: 2;
 }
 
-.score-bubbles--expanded .score-bubble--column:nth-child(odd) .score-bubble-row--empty span:nth-child(1) {
+.score-bubbles--expanded .score-bubble--column:nth-child(odd) .score-bubble-row--empty:not(.score-bubble-row--numbers) span:nth-child(1) {
   order: 3;
 }
 

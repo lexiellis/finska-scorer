@@ -90,6 +90,7 @@ function ShotEditForm({
   setDraft,
   onSave,
   onCancel,
+  scoreOnly = false,
 }: {
   draft: { shotType: SelectableShotType; distance: Distance; score: number; outcome: Outcome };
   setDraft: Dispatch<
@@ -102,48 +103,56 @@ function ShotEditForm({
   >;
   onSave: () => void;
   onCancel: () => void;
+  scoreOnly?: boolean;
 }) {
   return (
-    <div className="history-edit-grid" onClick={(e) => e.stopPropagation()}>
-      <select
-        className="history-input"
-        value={draft.shotType}
-        onChange={(e) =>
-          setDraft((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  shotType: e.target.value as SelectableShotType,
-                }
-              : prev,
-          )
-        }
-      >
-        {SHOT_TYPES.map((v) => (
-          <option key={v} value={v}>
-            {v}
-          </option>
-        ))}
-      </select>
-      <select
-        className="history-input"
-        value={String(draft.distance)}
-        onChange={(e) =>
-          setDraft((prev) => {
-            if (!prev) return prev;
-            const next = e.target.value.endsWith('+')
-              ? (e.target.value as Distance)
-              : (Number(e.target.value) as Distance);
-            return { ...prev, distance: next };
-          })
-        }
-      >
-        {DISTANCES.map((v) => (
-          <option key={String(v)} value={String(v)}>
-            {formatDistanceLabel(v)}
-          </option>
-        ))}
-      </select>
+    <div
+      className={`history-edit-grid${scoreOnly ? ' history-edit-grid--score-only' : ''}`}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {!scoreOnly && (
+        <>
+          <select
+            className="history-input"
+            value={draft.shotType}
+            onChange={(e) =>
+              setDraft((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      shotType: e.target.value as SelectableShotType,
+                    }
+                  : prev,
+              )
+            }
+          >
+            {SHOT_TYPES.map((v) => (
+              <option key={v} value={v}>
+                {v}
+              </option>
+            ))}
+          </select>
+          <select
+            className="history-input"
+            value={String(draft.distance)}
+            onChange={(e) =>
+              setDraft((prev) => {
+                if (!prev) return prev;
+                const next = e.target.value.endsWith('+')
+                  ? (e.target.value as Distance)
+                  : (Number(e.target.value) as Distance);
+                return { ...prev, distance: next };
+              })
+            }
+          >
+            {DISTANCES.map((v) => (
+              <option key={String(v)} value={String(v)}>
+                {formatDistanceLabel(v)}
+              </option>
+            ))}
+          </select>
+        </>
+      )}
       <input
         className="history-input history-input-score"
         type="number"
@@ -161,23 +170,24 @@ function ShotEditForm({
           )
         }
       />
-      <select
-        className="history-input"
-        value={draft.outcome}
-        onChange={(e) =>
-          setDraft((prev) => (prev ? { ...prev, outcome: e.target.value as Outcome } : prev))
-        }
-      >
-        {SELECTABLE_OUTCOMES.map((v) => (
-          <option key={v} value={v}>
-            {OUTCOME_BUTTON_LABELS[v]}
-          </option>
-        ))}
-        {/* Keep legacy outcome visible if editing an older throw */}
-        {!SELECTABLE_OUTCOMES.includes(
-          draft.outcome as (typeof SELECTABLE_OUTCOMES)[number],
-        ) && <option value={draft.outcome}>{OUTCOME_BUTTON_LABELS[draft.outcome]}</option>}
-      </select>
+      {!scoreOnly && (
+        <select
+          className="history-input"
+          value={draft.outcome}
+          onChange={(e) =>
+            setDraft((prev) => (prev ? { ...prev, outcome: e.target.value as Outcome } : prev))
+          }
+        >
+          {SELECTABLE_OUTCOMES.map((v) => (
+            <option key={v} value={v}>
+              {OUTCOME_BUTTON_LABELS[v]}
+            </option>
+          ))}
+          {!SELECTABLE_OUTCOMES.includes(
+            draft.outcome as (typeof SELECTABLE_OUTCOMES)[number],
+          ) && <option value={draft.outcome}>{OUTCOME_BUTTON_LABELS[draft.outcome]}</option>}
+        </select>
+      )}
       <div className="history-actions">
         <button type="button" className="history-btn" onClick={onSave}>
           Save
@@ -218,7 +228,7 @@ export function ScoreBoard({
   );
   const rowCount = Math.max(0, ...teamShots.map((rows) => rows.length));
 
-  const isStats = isStatsSession(game);
+  const isPractice = isStatsSession(game);
 
   const teamMeta = displayTeams.map((team, teamIndex) => {
     const total = game.scores[team.id] ?? 0;
@@ -247,10 +257,10 @@ export function ScoreBoard({
     return (
       <div className="score-header">
         <div className="score-bubbles">
-          {teamMeta.map(({ team, total, throwCount, eliminated, isActive, name, upcomingName, multiPlayerTeam }) => (
+          {teamMeta.map(({ team, total, eliminated, isActive, name, upcomingName, multiPlayerTeam }) => (
             <div
               key={team.id}
-              className={teamBubbleClass(isActive, eliminated, isStats ? 0 : total)}
+              className={teamBubbleClass(isActive, eliminated, total)}
             >
               <span className="score-bubble-name">
                 {isActive && (
@@ -263,9 +273,7 @@ export function ScoreBoard({
               {isActive && multiPlayerTeam && (
                 <span className="score-bubble-team-hint">{name}</span>
               )}
-              <span className="score-bubble-total">
-                {isStats ? throwCount : total}
-              </span>
+              <span className="score-bubble-total">{total}</span>
             </div>
           ))}
         </div>
@@ -283,7 +291,7 @@ export function ScoreBoard({
 
   return (
     <div
-      className={`score-board-expanded${tapToDismiss ? ' score-board-expanded--tap-dismiss' : ''}`}
+      className={`score-board-expanded${tapToDismiss ? ' score-board-expanded--tap-dismiss' : ''}${isPractice ? ' score-board-expanded--numbers' : ''}`}
       onClick={tapToDismiss ? onDismiss : undefined}
       onKeyDown={
         tapToDismiss
@@ -321,17 +329,19 @@ export function ScoreBoard({
                   const shot = teamThrowList[rowIndex];
                   if (!shot) {
                     return (
-                      <div key={rowIndex} className="score-bubble-row score-bubble-row--empty">
+                      <div
+                        key={rowIndex}
+                        className={`score-bubble-row score-bubble-row--empty${isPractice ? ' score-bubble-row--numbers' : ''}`}
+                      >
                         <span>—</span>
                         <span>—</span>
-                        <span>—</span>
+                        {!isPractice && <span>—</span>}
                       </div>
                     );
                   }
 
                   const isMiss = !isHitShot(shot);
                   const isBust =
-                    !isStats &&
                     !isMiss &&
                     shot.score !== null &&
                     shot.scoreBefore + shot.score > FINSKA_TARGET;
@@ -351,7 +361,18 @@ export function ScoreBoard({
                   const saveEdit = () => {
                     if (!draft || !onUpdateShot) return;
                     const score = Math.max(0, Math.min(12, Math.round(draft.score)));
-                    onUpdateShot(shot.id, { ...draft, score });
+                    const outcome = isPractice
+                      ? score === 0
+                        ? 'Unintended'
+                        : 'Intended'
+                      : draft.outcome;
+                    onUpdateShot(shot.id, {
+                      ...draft,
+                      score,
+                      outcome,
+                      shotType: isPractice ? 'Standard' : draft.shotType,
+                      distance: isPractice ? 4 : draft.distance,
+                    });
                     setEditingShotId(null);
                     setDraft(null);
                   };
@@ -373,6 +394,7 @@ export function ScoreBoard({
                           setDraft={setDraft}
                           onSave={saveEdit}
                           onCancel={cancelEdit}
+                          scoreOnly={isPractice}
                         />
                       </div>
                     );
@@ -382,34 +404,33 @@ export function ScoreBoard({
                     .filter(Boolean)
                     .join(' ');
 
+                  const playerName =
+                    team.playerIds.length > 1
+                      ? getPlayerName(players, shot.playerId)
+                      : undefined;
+
                   return (
                     <div
                       key={shot.id}
-                      className="score-bubble-row"
+                      className={`score-bubble-row${isPractice ? ' score-bubble-row--numbers' : ''}`}
                       onClick={canEditShots ? startEdit : undefined}
                     >
                       <div className={`score-bubble-row-total ${scoreClass}`}>
-                        {isStats
-                          ? shot.score === null
-                            ? '—'
-                            : shot.score
-                          : shot.scoreAfter}
+                        {shot.scoreAfter}
                       </div>
                       <div className={`score-bubble-row-throw ${scoreClass}`}>
                         {formatPins(shot.score)}
                       </div>
-                      <div className="score-bubble-row-shot">
-                        <ShotInfoCell
-                          shot={shot}
-                          playerName={
-                            multiPlayerTeam
-                              ? getPlayerName(players, shot.playerId)
-                              : undefined
-                          }
-                          isMiss={isMiss}
-                          isBust={isBust}
-                        />
-                      </div>
+                      {!isPractice && (
+                        <div className="score-bubble-row-shot">
+                          <ShotInfoCell
+                            shot={shot}
+                            playerName={playerName}
+                            isMiss={isMiss}
+                            isBust={isBust}
+                          />
+                        </div>
+                      )}
                     </div>
                   );
                 })}
