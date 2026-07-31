@@ -1,13 +1,13 @@
 export const SHOT_TYPES = [
   'Standard',
-  'Inertia',
-  'Retro',
-  'Elephant',
-  'Kick',
-  'Puikula',
   'Bunch',
-  'Tuck',
+  'Retro',
+  'Puikula',
+  'Kick',
+  'Elephant',
   'Crowd',
+  'Tuck',
+  'Inertia',
 ] as const;
 
 export type SelectableShotType = (typeof SHOT_TYPES)[number];
