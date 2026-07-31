@@ -8,6 +8,9 @@ const LEGACY_TABLE = 'app_state';
 const BATCH_SIZE = 400;
 /** Supabase/PostgREST caps a single select at 1000 rows by default. */
 const FETCH_PAGE_SIZE = 1000;
+/** Quarantine bucket for duplicated CSV imports — never load into the app. */
+export const CSV_IMPORT_DUPES_GAME_ID = 'import-molkky-log-v1-dupes';
+const CSV_IMPORT_GAME_ID = 'import-molkky-log-v1';
 
 type LegacyStateRow = { id: string; data: AppData };
 
@@ -133,16 +136,27 @@ export function mergeLocalWithRemote(
     { deviceId, data: local },
   ]);
 
+  // Never let local caches reintroduce duplicated CSV import throws.
+  const remoteCsvShots = remote.shots.filter((s) => s.gameId === CSV_IMPORT_GAME_ID);
+  const withoutLocalCsv = merged.shots.filter(
+    (s) => s.gameId !== CSV_IMPORT_GAME_ID && s.gameId !== CSV_IMPORT_DUPES_GAME_ID,
+  );
+  const csvFixed: AppData = {
+    ...merged,
+    games: merged.games.filter((g) => g.id !== CSV_IMPORT_DUPES_GAME_ID),
+    shots: [...withoutLocalCsv, ...remoteCsvShots],
+  };
+
   const localActive = local.games.find(
     (g) => g.endedAt === null && (g.scribeDeviceId === deviceId || !g.scribeDeviceId),
   );
-  if (!localActive) return merged;
+  if (!localActive) return csvFixed;
 
   return {
-    ...merged,
-    games: merged.games.map((g) => (g.id === localActive.id ? localActive : g)),
+    ...csvFixed,
+    games: csvFixed.games.map((g) => (g.id === localActive.id ? localActive : g)),
     shots: mergeById([
-      ...merged.shots.filter((s) => s.gameId !== localActive.id),
+      ...csvFixed.shots.filter((s) => s.gameId !== localActive.id),
       ...local.shots.filter((s) => s.gameId === localActive.id),
     ]),
   };
@@ -394,7 +408,9 @@ export async function fetchRelationalAppData(
   }
 
   const games = visibleGamesForDevice(
-    (gamesRes.data ?? []).map(fromGameRow),
+    (gamesRes.data ?? [])
+      .map(fromGameRow)
+      .filter((g) => g.id !== CSV_IMPORT_DUPES_GAME_ID),
     deviceId,
   );
   const gameIds = new Set(games.map((g) => g.id));
@@ -405,7 +421,7 @@ export async function fetchRelationalAppData(
     games,
     shots: (shotsRes.data ?? [])
       .map(fromShotRow)
-      .filter((s) => gameIds.has(s.gameId)),
+      .filter((s) => gameIds.has(s.gameId) && s.gameId !== CSV_IMPORT_DUPES_GAME_ID),
   }).data;
 
   return { data, error: null };

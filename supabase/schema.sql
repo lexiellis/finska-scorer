@@ -139,3 +139,15 @@ on public.finska_shots for insert to anon with check (true);
 drop policy if exists "Public update finska_shots" on public.finska_shots;
 create policy "Public update finska_shots"
 on public.finska_shots for update to anon using (true) with check (true);
+
+drop policy if exists "Public delete finska_shots" on public.finska_shots;
+create policy "Public delete finska_shots"
+on public.finska_shots for delete to anon using (true);
+
+drop policy if exists "Public delete finska_games" on public.finska_games;
+create policy "Public delete finska_games"
+on public.finska_games for delete to anon using (true);
+
+drop policy if exists "Public delete finska_matches" on public.finska_matches;
+create policy "Public delete finska_matches"
+on public.finska_matches for delete to anon using (true);

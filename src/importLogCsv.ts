@@ -98,11 +98,12 @@ function scoreFromRow(_hit: string, _outcome: Outcome): number | null {
 }
 
 function upsertPlayer(players: Player[], name: string): { players: Player[]; player: Player } {
-  const existing = players.find((p) => p.name === name);
+  const normalized = name.trim().toLowerCase();
+  const existing = players.find((p) => p.name.trim().toLowerCase() === normalized);
   if (existing) return { players, player: existing };
   const player: Player = {
     id: createId(),
-    name,
+    name: name.trim(),
     createdAt: new Date().toISOString(),
   };
   return { players: [...players, player], player };
@@ -137,6 +138,7 @@ export function importLogCsv(
   const playerIdByName = new Map<string, string>();
   const shots: Shot[] = [];
   let lastDate = new Date(2026, 6, 2, 12, 0, 0, 0);
+  let importedRow = 0;
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i]!;
@@ -150,22 +152,26 @@ export function importLogCsv(
 
     let nextPlayers = players;
     let player: Player;
-    const cachedId = playerIdByName.get(row.player);
+    const nameKey = row.player.trim().toLowerCase();
+    const cachedId = playerIdByName.get(nameKey);
     if (cachedId) {
       player = players.find((p) => p.id === cachedId)!;
     } else {
       const upserted = upsertPlayer(players, row.player);
       nextPlayers = upserted.players;
       player = upserted.player;
-      playerIdByName.set(row.player, player.id);
+      playerIdByName.set(nameKey, player.id);
     }
     players = nextPlayers;
 
     const score = scoreFromRow(row.hit, outcome);
     const recordedAt = new Date(rowDate.getTime() + i * 1000).toISOString();
+    // Stable ids so re-imports upsert instead of duplicating forever.
+    const shotId = `${sessionId}:row:${importedRow}`;
+    importedRow += 1;
 
     shots.push({
-      id: createId(),
+      id: shotId,
       gameId: sessionId,
       teamId: player.id,
       playerId: player.id,
